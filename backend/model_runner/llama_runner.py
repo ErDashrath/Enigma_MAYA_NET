@@ -62,10 +62,14 @@ You are a medical AI assistant specialized in risk assessment. Analyze the follo
   }
 }"""
     
-    def prepare_input_data(self, input_data: Dict[str, Any]) -> str:
+    def prepare_input_data(self, input_data: Dict[str, Any], diabetes_context: Dict[str, Any] = None) -> str:
         """
         Prepare and format input data for the LLaMA model
-        Adds medical context and ensures proper formatting
+        Adds medical context and diabetes assessment integration
+        
+        Args:
+            input_data: Patient vital signs and lifestyle data
+            diabetes_context: Optional diabetes risk assessment from SVM model
         """
         # Add medical context to raw data
         formatted_data = {
@@ -91,6 +95,19 @@ You are a medical AI assistant specialized in risk assessment. Analyze the follo
             }
         }
         
+        # ===== DIABETES CONTEXT INTEGRATION =====
+        # Add diabetes risk assessment to the structured input for LLaMA
+        if diabetes_context:
+            formatted_data["diabetes_assessment"] = {
+                "svm_probability": diabetes_context['stability_score'],
+                "diagnosis": diabetes_context['diagnosis_label'],
+                "risk_category": diabetes_context['risk_level'],
+                "model_type": "Support Vector Machine (SVM)",
+                "confidence": "High" if diabetes_context['stability_score'] > 0.7 or diabetes_context['stability_score'] < 0.3 else "Medium"
+            }
+            print(f"📊 DIABETES ASSESSMENT INTEGRATED: {diabetes_context['risk_level']}")  # Debug logging
+        # ===== END DIABETES INTEGRATION =====
+        
         # Remove None values to clean up the data
         def remove_none_values(obj):
             if isinstance(obj, dict):
@@ -102,20 +119,24 @@ You are a medical AI assistant specialized in risk assessment. Analyze the follo
         cleaned_data = remove_none_values(formatted_data)
         return json.dumps(cleaned_data, indent=2)
     
-    def predict_medical_risk(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def predict_medical_risk(self, input_data: Dict[str, Any], diabetes_context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         High-level method for medical risk prediction
         Converts LLaMA output to standardized risk assessment format
+        Enhanced with diabetes risk assessment integration
         
         Args:
             input_data: Validated patient data from RiskInputSerializer
+            diabetes_context: Optional diabetes risk assessment from SVM model
             
         Returns:
-            Dict containing standardized risk assessment
+            Dict containing standardized risk assessment with diabetes insights
         """
         try:
-            # Get raw LLaMA response
-            llama_response = self.run_llama(input_data)
+            # ===== DIABETES CONTEXT INTEGRATION =====
+            # Pass diabetes context to LLaMA for enhanced risk assessment
+            llama_response = self.run_llama(input_data, diabetes_context)
+            # ===== END DIABETES INTEGRATION =====
             
             # Extract risk prediction data
             risk_prediction = llama_response.get('risk_prediction', {})
@@ -245,29 +266,48 @@ You are a medical AI assistant specialized in risk assessment. Analyze the follo
             }
         }
 
-    def run_llama(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def run_llama(self, input_data: Dict[str, Any], diabetes_context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Main function to run LLaMA 3.2 Medical Pro for risk prediction
+        Enhanced with diabetes risk model integration
         
         Args:
             input_data: Validated input data from RiskInputSerializer
+            diabetes_context: Optional diabetes risk assessment from SVM model
             
         Returns:
-            Dict containing risk prediction and explainability factors
+            Dict containing risk prediction and explainability factors with diabetes insights
         """
         try:
             # Load prompt template
             prompt_template = self.load_prompt_template()
             
-            # Prepare input data
-            formatted_input = self.prepare_input_data(input_data)
+            # Prepare input data with diabetes context
+            formatted_input = self.prepare_input_data(input_data, diabetes_context)
             
             # Insert data into prompt template
             full_prompt = prompt_template.replace('{{json_input}}', formatted_input)
             
+            # ===== DIABETES CONTEXT ENHANCEMENT FOR WEB-LLM =====
+            # Add diabetes assessment to the LLaMA prompt for enhanced medical insights
+            if diabetes_context:
+                diabetes_prompt_section = f"""
+
+**DIABETES RISK ASSESSMENT (SVM Model Results):**
+- Diabetes Probability: {diabetes_context['stability_score']:.3f}
+- Clinical Assessment: {diabetes_context['diagnosis_label']}
+- Risk Classification: {diabetes_context['risk_level']}
+
+Please integrate this diabetes-specific analysis into your overall risk assessment.
+Consider diabetes-related complications and management strategies in your recommendations.
+"""
+                full_prompt += diabetes_prompt_section
+                print(f"🔗 DIABETES CONTEXT ADDED TO LLaMA PROMPT")  # Debug logging
+            # ===== END DIABETES CONTEXT ENHANCEMENT =====
+            
             # Since WebLLM runs in browser, we'll return a mock response with realistic medical assessment
             # In production, this would integrate with your WebLLM service via API or WebSocket
-            mock_response = self._generate_mock_response(input_data)
+            mock_response = self._generate_mock_response(input_data, diabetes_context)
             
             logger.info(f"Risk prediction completed for input: {list(input_data.keys())}")
             return mock_response
@@ -276,14 +316,39 @@ You are a medical AI assistant specialized in risk assessment. Analyze the follo
             logger.error(f"Error in LLaMA risk prediction: {str(e)}")
             return self._get_error_response(str(e))
     
-    def _generate_mock_response(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_mock_response(self, input_data: Dict[str, Any], diabetes_context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Generate a realistic mock response based on medical guidelines
         This simulates what the LLaMA 3.2 Medical Pro model would return
+        Enhanced with diabetes risk assessment integration
+        
+        Args:
+            input_data: Patient vital signs and lifestyle data
+            diabetes_context: Optional diabetes risk assessment from SVM model
         """
         # Calculate risk factors based on medical thresholds
         risk_factors = []
         stability_score = 100
+        
+        # ===== DIABETES RISK INTEGRATION =====
+        # Incorporate diabetes assessment into overall risk calculation
+        if diabetes_context:
+            diabetes_risk_level = diabetes_context.get('risk_level', 'Low Risk')
+            diabetes_diagnosis = diabetes_context.get('diagnosis_label', '')
+            diabetes_probability = diabetes_context.get('stability_score', 0.0)
+            
+            if diabetes_risk_level == "High Risk":
+                risk_factors.append(f"High diabetes risk detected (probability: {diabetes_probability:.3f})")
+                stability_score -= 25
+            elif diabetes_risk_level == "Medium Risk":
+                risk_factors.append(f"Moderate diabetes risk identified (probability: {diabetes_probability:.3f})")
+                stability_score -= 15
+            elif diabetes_diagnosis == "The person is diabetic":
+                risk_factors.append("Existing diabetes diagnosis requires ongoing management")
+                stability_score -= 20
+            
+            print(f"🎯 DIABETES RISK INTEGRATED INTO OVERALL ASSESSMENT: {diabetes_risk_level}")  # Debug logging
+        # ===== END DIABETES INTEGRATION =====
         
         # Blood pressure assessment
         systolic = input_data.get('systolic', 120)

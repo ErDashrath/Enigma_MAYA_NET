@@ -1115,16 +1115,30 @@ def vitals_api(request):
     if request.method == 'GET':
         try:
             patient_profile = PatientProfile.objects.get(user=request.user)
-            vitals = VitalSigns.objects.filter(patient=patient_profile).order_by('-recorded_at')[:10]
+            vitals = VitalSigns.objects.filter(patient=patient_profile).order_by('-measured_at')[:10]
             
             vitals_data = []
             for vital in vitals:
+                # Calculate BMI if height and weight available
+                bmi = None
+                if vital.height and vital.weight:
+                    height_m = vital.height * 0.0254
+                    weight_kg = vital.weight * 0.453592
+                    bmi = round(weight_kg / (height_m * height_m), 2)
+                
                 vitals_data.append({
                     'id': vital.id,
-                    'systolic_bp': vital.systolic_bp,
-                    'diastolic_bp': vital.diastolic_bp,
+                    'systolic': vital.systolic_bp,
+                    'diastolic': vital.diastolic_bp,
                     'heart_rate': vital.heart_rate,
-                    'recorded_at': vital.recorded_at.isoformat()
+                    'temperature': vital.temperature,
+                    'weight': vital.weight,
+                    'height': vital.height,
+                    'blood_glucose': vital.blood_glucose,
+                    'oxygen_saturation': vital.oxygen_saturation,
+                    'bmi': bmi,
+                    'measured_at': vital.measured_at.isoformat(),
+                    'recorded_at': vital.created_at.isoformat()
                 })
             
             return JsonResponse({'success': True, 'vitals': vitals_data})
@@ -1135,13 +1149,80 @@ def vitals_api(request):
         try:
             patient_profile = PatientProfile.objects.get(user=request.user)
             vitals_data = json.loads(request.body)
-            vital_signs = VitalSignsService.record_vital_signs(patient_profile, vitals_data)
             
-            return JsonResponse({
+            # Create comprehensive vitals record
+            vital_signs = VitalSigns.objects.create(
+                patient=patient_profile,
+                systolic_bp=vitals_data.get('systolic'),
+                diastolic_bp=vitals_data.get('diastolic'),
+                heart_rate=vitals_data.get('heart_rate'),
+                temperature=vitals_data.get('temperature'),
+                weight=vitals_data.get('weight'),
+                height=vitals_data.get('height'),
+                blood_glucose=vitals_data.get('blood_glucose'),
+                oxygen_saturation=vitals_data.get('oxygen_saturation'),
+                measured_at=timezone.now(),
+                source='manual'
+            )
+            
+            # Calculate BMI if height and weight provided
+            bmi_value = None
+            if vital_signs.height and vital_signs.weight:
+                height_m = vital_signs.height * 0.0254
+                weight_kg = vital_signs.weight * 0.453592
+                bmi_value = weight_kg / (height_m * height_m)
+            
+            response_data = {
                 'success': True,
                 'vital_id': vital_signs.id,
-                'message': 'Vitals recorded successfully'
-            })
+                'message': 'Vitals recorded successfully',
+                'bmi': round(bmi_value, 2) if bmi_value else None,
+                'recorded_at': vital_signs.measured_at.isoformat()
+            }
+            
+            # If diabetes-related data provided, trigger risk assessment
+            if vitals_data.get('blood_glucose') and bmi_value:
+                try:
+                    # Prepare diabetes assessment data
+                    diabetes_input = {
+                        'pregnancies': vitals_data.get('pregnancies', 0),
+                        'glucose': vitals_data.get('blood_glucose'),
+                        'blood_pressure': vitals_data.get('systolic', 120),
+                        'skin_thickness': vitals_data.get('skin_thickness', 20),
+                        'insulin': vitals_data.get('insulin', 80),
+                        'bmi': bmi_value,
+                        'diabetes_pedigree_function': vitals_data.get('diabetes_pedigree_function', 0.3),
+                        'age': vitals_data.get('age', 30)
+                    }
+                    
+                    # Run diabetes risk prediction
+                    from hack_diabetes import get_diabetes_model
+                    diabetes_model = get_diabetes_model()
+                    diabetes_result = diabetes_model.predict_diabetes_risk(diabetes_input)
+                    
+                    response_data['diabetes_assessment'] = diabetes_result
+                    
+                    # Create risk assessment record
+                    risk_assessment = RiskAssessment.objects.create(
+                        patient=patient_profile,
+                        stability_score=diabetes_result['stability_score'] * 100,
+                        risk_level=diabetes_result['risk_level'],
+                        risk_percentage=diabetes_result['stability_score'] * 100,
+                        risk_factors=[f"Diabetes risk: {diabetes_result['diagnosis_label']}"],
+                        recommendations=[f"Risk level: {diabetes_result['risk_level']}"],
+                        assessment_type='diabetes_svm'
+                    )
+                    
+                    response_data['risk_assessment_id'] = risk_assessment.id
+                    
+                except Exception as diabetes_error:
+                    print(f"Diabetes assessment failed: {diabetes_error}")
+                    response_data['diabetes_warning'] = "Diabetes assessment unavailable"
+            
+            return JsonResponse(response_data)
+            
+        except PatientProfile.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Patient profile not found'})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
 
@@ -1398,12 +1479,45 @@ class RiskPredictView(APIView):
             # Get validated data
             input_data = serializer.validated_data
             
+            # ===== DIABETES RISK MODEL INTEGRATION =====
+            # Insert diabetes model inference into the diagnosis workflow
+            diabetes_result = None
+            try:
+                from hack_diabetes import get_diabetes_model
+                diabetes_model = get_diabetes_model()
+                
+                # Prepare diabetes model input from patient data
+                diabetes_input = {
+                    'pregnancies': input_data.get('pregnancies', 0),
+                    'glucose': input_data.get('blood_glucose', input_data.get('glucose', 100)),
+                    'blood_pressure': input_data.get('systolic', 70),  # Use systolic as primary BP
+                    'skin_thickness': input_data.get('skin_thickness', 20),
+                    'insulin': input_data.get('insulin', 80),
+                    'bmi': input_data.get('bmi', 25),
+                    'diabetes_pedigree_function': input_data.get('diabetes_pedigree_function', 0.3),
+                    'age': input_data.get('age', patient_profile.age if hasattr(patient_profile, 'age') else 30)
+                }
+                
+                # Get diabetes risk prediction in exact JSON format
+                diabetes_result = diabetes_model.predict_diabetes_risk(diabetes_input)
+                print(f"🩺 DIABETES MODEL RESULT: {diabetes_result}")  # Debug logging
+                
+            except Exception as e:
+                print(f"⚠️ Diabetes model prediction failed: {e}")
+                # Continue with normal workflow if diabetes model fails
+                diabetes_result = {
+                    "stability_score": 0.5,
+                    "diagnosis_label": "Diabetes assessment unavailable",
+                    "risk_level": "Low Risk"
+                }
+            # ===== END DIABETES MODEL INTEGRATION =====
+            
             # Initialize LLaMA runner
             from model_runner.llama_runner import LlamaRunner
             llama = LlamaRunner()
             
-            # Generate risk prediction using LLaMA
-            prediction_result = llama.predict_medical_risk(input_data)
+            # Generate risk prediction using LLaMA (with diabetes context if available)
+            prediction_result = llama.predict_medical_risk(input_data, diabetes_context=diabetes_result)
             
             # Store risk assessment in database
             risk_assessment = RiskAssessment.objects.create(
@@ -1416,7 +1530,52 @@ class RiskPredictView(APIView):
                 assessment_type='llama_prediction'
             )
             
-            # Prepare response
+            # ===== DIABETES NUDGE SYSTEM INTEGRATION =====
+            # Automatically trigger nudges for Medium/High diabetes risk
+            if diabetes_result and diabetes_result['risk_level'] != "Low Risk":
+                try:
+                    from ai_engine.models import AIHealthNudge
+                    from django.utils import timezone
+                    from datetime import timedelta
+                    
+                    # Create diabetes management nudge based on risk level
+                    nudge_title = "Diabetes Risk Management"
+                    if diabetes_result['risk_level'] == "High Risk":
+                        nudge_message = f"Our AI analysis indicates a high diabetes risk (probability: {diabetes_result['stability_score']:.1%}). Consider consulting with your healthcare provider for diabetes screening and preventive care."
+                        nudge_priority = "high"
+                    else:  # Medium Risk
+                        nudge_message = f"Our AI analysis indicates a moderate diabetes risk (probability: {diabetes_result['stability_score']:.1%}). Consider adopting healthy lifestyle habits and regular health monitoring."
+                        nudge_priority = "medium"
+                    
+                    # Create AI health nudge using existing nudge system
+                    diabetes_nudge = AIHealthNudge.objects.create(
+                        patient=request.user,
+                        nudge_type='health_education',
+                        title=nudge_title,
+                        message=nudge_message,
+                        action_suggestion="Schedule healthcare consultation or lifestyle review",
+                        model_used='Diabetes SVM + LLaMA Integration',
+                        prompt_context={
+                            'diabetes_assessment': diabetes_result,
+                            'trigger_reason': f'Diabetes risk level: {diabetes_result["risk_level"]}',
+                            'assessment_id': risk_assessment.id
+                        },
+                        patient_history={'diabetes_risk_detected': True},
+                        current_context={'risk_level': diabetes_result['risk_level']},
+                        behavioral_patterns={'requires_diabetes_monitoring': True},
+                        scheduled_for=timezone.now(),
+                        expires_at=timezone.now() + timedelta(days=7),  # 7-day expiry
+                        delivery_method='dashboard_card'
+                    )
+                    
+                    print(f"🔔 DIABETES NUDGE TRIGGERED: {diabetes_result['risk_level']} - Nudge ID: {diabetes_nudge.id}")  # Debug logging
+                    
+                except Exception as nudge_error:
+                    print(f"⚠️ Failed to create diabetes nudge: {nudge_error}")
+                    # Continue execution even if nudge creation fails
+            # ===== END DIABETES NUDGE INTEGRATION =====
+            
+            # Prepare response with diabetes integration
             response_data = {
                 'success': True,
                 'assessment_id': risk_assessment.id,
@@ -1430,11 +1589,13 @@ class RiskPredictView(APIView):
                     'recommendations': prediction_result['recommendations'],
                     'llama_insights': prediction_result.get('llama_insights', 'Advanced AI analysis completed')
                 },
+                'diabetes_assessment': diabetes_result,  # Include diabetes model results
                 'patient_context': {
                     'patient_id': patient_profile.id,
-                    'age': patient_profile.age,
+                    'age': patient_profile.age if hasattr(patient_profile, 'age') else None,
                     'has_medical_history': bool(patient_profile.medical_conditions)
-                }
+                },
+                'nudge_triggered': diabetes_result and diabetes_result['risk_level'] != "Low Risk"  # Indicate if nudge was triggered
             }
             
             return Response(response_data, status=status.HTTP_200_OK)

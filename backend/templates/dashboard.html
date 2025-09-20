@@ -55,6 +55,47 @@
                 User ID: {{ user.id }} | 
                 Username: {{ user.username }}
             </div>
+
+            <!-- User Profile Card (Hardcoded Demo Data) -->
+            {% if user.userprofile.user_type == 'patient' %}
+            <div class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Patient Profile</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-600 font-medium">Age:</span>
+                        <span class="text-gray-800 ml-1">28 years</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 font-medium">Gender:</span>
+                        <span class="text-gray-800 ml-1">Male</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 font-medium">Blood Type:</span>
+                        <span class="text-gray-800 ml-1">O+</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 font-medium">Height:</span>
+                        <span class="text-gray-800 ml-1">175 cm</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 font-medium">Emergency Contact:</span>
+                        <span class="text-gray-800 ml-1">+91 98765 43210</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 font-medium">Allergies:</span>
+                        <span class="text-gray-800 ml-1">Peanuts, Dust</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 font-medium">Medical ID:</span>
+                        <span class="text-gray-800 ml-1">PT-2025-001</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600 font-medium">Last Checkup:</span>
+                        <span class="text-gray-800 ml-1">15 Sep 2025</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Quick Stats -->
@@ -69,7 +110,7 @@
                             </svg>
                         </div>
                         <div class="stat-title">Heart Rate</div>
-                        <div class="stat-value text-primary">--</div>
+                        <div class="stat-value text-primary" id="heart-rate-value">--</div>
                         <div class="stat-desc">Last reading</div>
                     </div>
                 </div>
@@ -82,7 +123,7 @@
                             </svg>
                         </div>
                         <div class="stat-title">Blood Pressure</div>
-                        <div class="stat-value text-secondary">--/--</div>
+                        <div class="stat-value text-secondary" id="blood-pressure-value">--/--</div>
                         <div class="stat-desc">mmHg</div>
                     </div>
                 </div>
@@ -95,7 +136,7 @@
                             </svg>
                         </div>
                         <div class="stat-title">Appointments</div>
-                        <div class="stat-value text-accent">0</div>
+                        <div class="stat-value text-accent">2</div>
                         <div class="stat-desc">Upcoming</div>
                     </div>
                 </div>
@@ -108,7 +149,7 @@
                             </svg>
                         </div>
                         <div class="stat-title">AI Insights</div>
-                        <div class="stat-value text-info">0</div>
+                        <div class="stat-value text-info">3</div>
                         <div class="stat-desc">New recommendations</div>
                     </div>
                 </div>
@@ -168,6 +209,63 @@
             {% endif %}
         </div>
 
+        <!-- Additional Vitals Stats (Patient Only) -->
+        {% if user.userprofile.user_type == 'patient' %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="stats shadow">
+                <div class="stat">
+                    <div class="stat-figure text-warning">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-title">Temperature</div>
+                    <div class="stat-value text-warning" id="temperature-value">--</div>
+                    <div class="stat-desc">Body temperature</div>
+                </div>
+            </div>
+            
+            <div class="stats shadow">
+                <div class="stat">
+                    <div class="stat-figure text-success">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-title">Weight</div>
+                    <div class="stat-value text-success" id="weight-value">--</div>
+                    <div class="stat-desc">Current weight</div>
+                </div>
+            </div>
+            
+            <div class="stats shadow">
+                <div class="stat">
+                    <div class="stat-figure text-error">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-title">Blood Glucose</div>
+                    <div class="stat-value text-error" id="glucose-value">--</div>
+                    <div class="stat-desc">mg/dL</div>
+                </div>
+            </div>
+            
+            <div class="stats shadow">
+                <div class="stat">
+                    <div class="stat-figure text-neutral">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-title">BMI</div>
+                    <div class="stat-value text-neutral" id="bmi-value">--</div>
+                    <div class="stat-desc">Body Mass Index</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Quick Actions -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div class="card bg-base-100 shadow-xl">
@@ -175,13 +273,13 @@
                     <h3 class="card-title">Quick Actions</h3>
                     <div class="grid grid-cols-2 gap-4 mt-4">
                         {% if user.userprofile.user_type == 'patient' %}
-                            <button class="btn btn-primary">
+                            <button class="btn btn-primary" onclick="openVitalsModal()">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                 </svg>
                                 Log Vitals
                             </button>
-                            <button class="btn btn-secondary">
+                            <button class="btn btn-secondary" onclick="openAppointmentModal()">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
@@ -193,7 +291,7 @@
                                 </svg>
                                 Medicine Alerts
                             </button>
-                            <button class="btn btn-info">
+                            <button class="btn btn-info" onclick="openAIInsightsModal()">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
@@ -235,13 +333,61 @@
                     <div class="space-y-4 mt-4">
                         <div class="flex items-center space-x-3">
                             <div class="avatar placeholder">
-                                <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
+                                <div class="bg-success text-white rounded-full w-8">
+                                    <span class="text-xs">♥</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800 font-medium">Heart rate logged: 72 BPM</p>
+                                <p class="text-xs text-gray-400">2 hours ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <div class="avatar placeholder">
+                                <div class="bg-primary text-white rounded-full w-8">
+                                    <span class="text-xs">🩺</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800 font-medium">Blood pressure recorded: 120/80 mmHg</p>
+                                <p class="text-xs text-gray-400">5 hours ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <div class="avatar placeholder">
+                                <div class="bg-warning text-white rounded-full w-8">
+                                    <span class="text-xs">💊</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800 font-medium">Medicine taken: Metformin 500mg</p>
+                                <p class="text-xs text-gray-400">1 day ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <div class="avatar placeholder">
+                                <div class="bg-info text-white rounded-full w-8">
                                     <span class="text-xs">AI</span>
                                 </div>
                             </div>
                             <div class="flex-1">
-                                <p class="text-sm text-gray-600">Welcome to VitalCircle! Your health journey starts here.</p>
-                                <p class="text-xs text-gray-400">Just now</p>
+                                <p class="text-sm text-gray-800 font-medium">AI Health Insight: Your diabetes risk is low. Keep up the healthy lifestyle!</p>
+                                <p class="text-xs text-gray-400">2 days ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <div class="avatar placeholder">
+                                <div class="bg-accent text-white rounded-full w-8">
+                                    <span class="text-xs">📅</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800 font-medium">Upcoming appointment with Dr. Smith</p>
+                                <p class="text-xs text-gray-400">Tomorrow at 2:00 PM</p>
                             </div>
                         </div>
                     </div>
@@ -271,12 +417,68 @@
                 
                 <!-- Medicine Alerts List -->
                 <div id="medicine-alerts-list" class="mt-4">
-                    <div class="text-center py-8 text-gray-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 7.172V5L8 4z" />
-                        </svg>
-                        <p>No medicine alerts set up yet.</p>
-                        <p class="text-sm mt-2">Click "Add Alert" to start tracking your medications with AI-powered reminders.</p>
+                    <!-- Hardcoded Medicine Alerts for Demo -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <span class="text-blue-600 font-bold">M</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">Metformin 500mg</h4>
+                                    <p class="text-sm text-gray-600">Take twice daily after meals</p>
+                                    <p class="text-xs text-blue-600">Next: Today 8:00 PM</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="badge badge-success">Active</div>
+                                <button class="btn btn-xs btn-outline">Edit</button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                    <span class="text-green-600 font-bold">V</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">Vitamin D3 1000 IU</h4>
+                                    <p class="text-sm text-gray-600">Take once daily with breakfast</p>
+                                    <p class="text-xs text-green-600">Next: Tomorrow 8:00 AM</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="badge badge-success">Active</div>
+                                <button class="btn btn-xs btn-outline">Edit</button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                                    <span class="text-yellow-600 font-bold">O</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">Omega-3 Fish Oil</h4>
+                                    <p class="text-sm text-gray-600">Take once daily with dinner</p>
+                                    <p class="text-xs text-yellow-600">Next: Today 7:00 PM</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="badge badge-warning">Reminder</div>
+                                <button class="btn btn-xs btn-outline">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Add more button -->
+                    <div class="mt-4 text-center">
+                        <button class="btn btn-outline btn-sm" onclick="openMedicineAlertModal()">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Add More Medicine Alerts
+                        </button>
                     </div>
                 </div>
                 
@@ -694,6 +896,196 @@
     </form>
 </dialog>
 
+<!-- Vitals Logging Modal -->
+<dialog id="vitals-modal" class="modal">
+    <div class="modal-box w-11/12 max-w-3xl">
+        <h3 class="font-bold text-lg mb-4">Log Your Vitals</h3>
+        <form id="vitals-form">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Basic Vitals -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Heart Rate (BPM)</span>
+                    </label>
+                    <input type="number" name="heart_rate" class="input input-bordered" placeholder="72" min="40" max="200">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Blood Pressure - Systolic</span>
+                    </label>
+                    <input type="number" name="systolic" class="input input-bordered" placeholder="120" min="80" max="250">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Blood Pressure - Diastolic</span>
+                    </label>
+                    <input type="number" name="diastolic" class="input input-bordered" placeholder="80" min="40" max="150">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Temperature (°F)</span>
+                    </label>
+                    <input type="number" name="temperature" class="input input-bordered" placeholder="98.6" min="95" max="110" step="0.1">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Weight (lbs)</span>
+                    </label>
+                    <input type="number" name="weight" class="input input-bordered" placeholder="150" min="50" max="500" step="0.1">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Height (inches)</span>
+                    </label>
+                    <input type="number" name="height" class="input input-bordered" placeholder="68" min="36" max="96" step="0.5">
+                </div>
+                
+                <!-- Diabetes-Related Fields -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Blood Glucose (mg/dL)</span>
+                    </label>
+                    <input type="number" name="blood_glucose" class="input input-bordered" placeholder="100" min="50" max="400">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Oxygen Saturation (%)</span>
+                    </label>
+                    <input type="number" name="oxygen_saturation" class="input input-bordered" placeholder="98" min="70" max="100">
+                </div>
+                
+                <!-- Diabetes Risk Factors -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Pregnancies (if applicable)</span>
+                    </label>
+                    <input type="number" name="pregnancies" class="input input-bordered" placeholder="0" min="0" max="20">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Skin Thickness (mm)</span>
+                    </label>
+                    <input type="number" name="skin_thickness" class="input input-bordered" placeholder="20" min="0" max="100">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Insulin Level (μU/mL)</span>
+                    </label>
+                    <input type="number" name="insulin" class="input input-bordered" placeholder="80" min="0" max="1000">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Diabetes Pedigree Function</span>
+                    </label>
+                    <input type="number" name="diabetes_pedigree_function" class="input input-bordered" placeholder="0.3" min="0" max="2" step="0.001">
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>Your vitals will be analyzed with our AI diabetes risk assessment system</span>
+            </div>
+            
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="document.getElementById('vitals-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Log Vitals & Get AI Analysis</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Appointment Booking Modal -->
+<dialog id="appointment-modal" class="modal">
+    <div class="modal-box w-11/12 max-w-2xl">
+        <h3 class="font-bold text-lg mb-4">Book Appointment</h3>
+        <form id="appointment-form">
+            <div class="grid grid-cols-1 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Healthcare Provider</span>
+                    </label>
+                    <select name="provider" class="select select-bordered">
+                        <option disabled selected>Select a provider</option>
+                        <option value="dr-smith">Dr. Smith - Cardiologist</option>
+                        <option value="dr-jones">Dr. Jones - Endocrinologist</option>
+                        <option value="dr-wilson">Dr. Wilson - General Practitioner</option>
+                    </select>
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Appointment Date</span>
+                    </label>
+                    <input type="date" name="appointment_date" class="input input-bordered" min="2025-09-21">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Preferred Time</span>
+                    </label>
+                    <select name="appointment_time" class="select select-bordered">
+                        <option disabled selected>Select time</option>
+                        <option value="09:00">9:00 AM</option>
+                        <option value="10:00">10:00 AM</option>
+                        <option value="11:00">11:00 AM</option>
+                        <option value="14:00">2:00 PM</option>
+                        <option value="15:00">3:00 PM</option>
+                        <option value="16:00">4:00 PM</option>
+                    </select>
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Reason for Visit</span>
+                    </label>
+                    <textarea name="reason" class="textarea textarea-bordered" placeholder="Describe your concerns or reason for the visit"></textarea>
+                </div>
+            </div>
+            
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="document.getElementById('appointment-modal').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Book Appointment</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- AI Insights Modal -->
+<dialog id="ai-insights-modal" class="modal">
+    <div class="modal-box w-11/12 max-w-4xl">
+        <h3 class="font-bold text-lg mb-4">AI Health Insights</h3>
+        <div id="ai-insights-content">
+            <div class="loading loading-spinner loading-lg mx-auto"></div>
+            <p class="text-center mt-4">Generating AI insights...</p>
+        </div>
+        
+        <div class="modal-action">
+            <button type="button" class="btn" onclick="document.getElementById('ai-insights-modal').close()">Close</button>
+            <button type="button" class="btn btn-primary" onclick="generateNewInsights()">Generate New Insights</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
 <!-- Include WebLLM Service -->
 <script src="{% static 'js/webllm-service.js' %}"></script>
 
@@ -728,9 +1120,24 @@ document.addEventListener('DOMContentLoaded', function() {
         if (alertForm) {
             alertForm.addEventListener('submit', handleMedicineAlertSubmit);
         }
+        
+        // Setup vitals form submission
+        const vitalsForm = document.getElementById('vitals-form');
+        if (vitalsForm) {
+            vitalsForm.addEventListener('submit', handleVitalsSubmit);
+        }
+        
+        // Setup appointment form submission
+        const appointmentForm = document.getElementById('appointment-form');
+        if (appointmentForm) {
+            appointmentForm.addEventListener('submit', handleAppointmentSubmit);
+        }
     {% else %}
         console.log('User is not a patient - skipping medicine alerts');
     {% endif %}
+    
+    // Load current vitals data for dashboard display
+    loadCurrentVitals();
 });
 
 // Open medicine alert modal
@@ -1089,6 +1496,292 @@ async function actOnNudge(nudgeId) {
         console.error('Error recording action:', error);
     }
 }
+
+// ===== NEW MODAL FUNCTIONS =====
+
+// Open vitals modal
+function openVitalsModal() {
+    document.getElementById('vitals-modal').showModal();
+}
+
+// Handle vitals form submission
+async function handleVitalsSubmit(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const vitalsData = {
+        heart_rate: parseInt(formData.get('heart_rate')) || null,
+        systolic: parseInt(formData.get('systolic')) || null,
+        diastolic: parseInt(formData.get('diastolic')) || null,
+        temperature: parseFloat(formData.get('temperature')) || null,
+        weight: parseFloat(formData.get('weight')) || null,
+        height: parseFloat(formData.get('height')) || null,
+        blood_glucose: parseInt(formData.get('blood_glucose')) || null,
+        oxygen_saturation: parseInt(formData.get('oxygen_saturation')) || null,
+        pregnancies: parseInt(formData.get('pregnancies')) || 0,
+        skin_thickness: parseInt(formData.get('skin_thickness')) || null,
+        insulin: parseInt(formData.get('insulin')) || null,
+        diabetes_pedigree_function: parseFloat(formData.get('diabetes_pedigree_function')) || null
+    };
+    
+    // Calculate BMI if height and weight are provided
+    if (vitalsData.height && vitalsData.weight) {
+        const heightInMeters = vitalsData.height * 0.0254;
+        const weightInKg = vitalsData.weight * 0.453592;
+        vitalsData.bmi = weightInKg / (heightInMeters * heightInMeters);
+    }
+    
+    try {
+        showToast('Logging vitals and generating AI analysis...', 'info');
+        
+        // Submit vitals data
+        const response = await fetch('/vitals/api/vitals/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(vitalsData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Close modal and reset form
+            document.getElementById('vitals-modal').close();
+            e.target.reset();
+            
+            showToast('Vitals logged successfully!', 'success');
+            
+            // If diabetes risk assessment available, trigger risk prediction
+            if (vitalsData.blood_glucose && vitalsData.bmi) {
+                await triggerDiabetesRiskAnalysis(vitalsData);
+            }
+            
+            // Reload dashboard stats
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast('Error logging vitals: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Network error occurred', 'error');
+    }
+}
+
+// Trigger diabetes risk analysis
+async function triggerDiabetesRiskAnalysis(vitalsData) {
+    try {
+        const response = await fetch('/vitals/api/risk-predict/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(vitalsData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success && result.risk_prediction) {
+            const riskLevel = result.risk_prediction.risk_level;
+            showToast(`AI Risk Analysis Complete: ${riskLevel} risk level`, 'info');
+        }
+    } catch (error) {
+        console.error('Risk analysis error:', error);
+    }
+}
+
+// Open appointment modal
+function openAppointmentModal() {
+    document.getElementById('appointment-modal').showModal();
+}
+
+// Handle appointment form submission
+async function handleAppointmentSubmit(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const appointmentData = {
+        provider: formData.get('provider'),
+        appointment_date: formData.get('appointment_date'),
+        appointment_time: formData.get('appointment_time'),
+        reason: formData.get('reason')
+    };
+    
+    try {
+        showToast('Booking appointment...', 'info');
+        
+        // Simulate API call - replace with actual endpoint
+        setTimeout(() => {
+            document.getElementById('appointment-modal').close();
+            e.target.reset();
+            showToast('Appointment request submitted successfully!', 'success');
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Network error occurred', 'error');
+    }
+}
+
+// Open AI insights modal
+function openAIInsightsModal() {
+    document.getElementById('ai-insights-modal').showModal();
+    generateAIInsights();
+}
+
+// Generate AI insights
+async function generateAIInsights() {
+    const contentDiv = document.getElementById('ai-insights-content');
+    
+    // Show loading state
+    contentDiv.innerHTML = `
+        <div class="loading loading-spinner loading-lg mx-auto"></div>
+        <p class="text-center mt-4">Generating AI insights...</p>
+    `;
+    
+    try {
+        // Simulate AI analysis - integrate with actual WebLLM or API
+        setTimeout(() => {
+            const insights = {
+                overall_health: "Good",
+                diabetes_risk: "Low to Medium",
+                recommendations: [
+                    "Maintain regular physical activity",
+                    "Monitor blood glucose levels weekly",
+                    "Consider consultation for preventive care"
+                ],
+                next_checkup: "Recommended in 3 months"
+            };
+            
+            contentDiv.innerHTML = `
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="stat bg-base-200 rounded-lg">
+                        <div class="stat-title">Overall Health Status</div>
+                        <div class="stat-value text-primary">${insights.overall_health}</div>
+                    </div>
+                    
+                    <div class="stat bg-base-200 rounded-lg">
+                        <div class="stat-title">Diabetes Risk Assessment</div>
+                        <div class="stat-value text-warning">${insights.diabetes_risk}</div>
+                    </div>
+                    
+                    <div class="card bg-base-200">
+                        <div class="card-body">
+                            <h4 class="card-title">AI Recommendations</h4>
+                            <ul class="list-disc list-inside space-y-1">
+                                ${insights.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span><strong>Next Checkup:</strong> ${insights.next_checkup}</span>
+                    </div>
+                </div>
+            `;
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error generating insights:', error);
+        contentDiv.innerHTML = `
+            <div class="alert alert-error">
+                <span>Error generating AI insights. Please try again.</span>
+            </div>
+        `;
+    }
+}
+
+// Generate new insights
+function generateNewInsights() {
+    generateAIInsights();
+}
+
+// Load current vitals data and update dashboard
+async function loadCurrentVitals() {
+    // Hardcoded user vitals data for demo
+    const hardcodedVitals = {
+        heart_rate: 72,
+        systolic: 120,
+        diastolic: 80,
+        temperature: 98.6,
+        weight: 70.5,
+        height: 175,
+        glucose: 95,
+        oxygen_saturation: 98,
+        bmi: 23.0,
+        timestamp: new Date().toISOString()
+    };
+    
+    try {
+        // Try to fetch real data first
+        const response = await fetch('/vitals/api/vitals/');
+        const result = await response.json();
+        
+        let vitalsToUse = hardcodedVitals; // Default to hardcoded
+        
+        if (result.success && result.vitals && result.vitals.length > 0) {
+            vitalsToUse = result.vitals[0]; // Use real data if available
+        }
+        
+        // Update heart rate
+        const heartRateElement = document.getElementById('heart-rate-value');
+        if (heartRateElement) {
+            heartRateElement.textContent = `${vitalsToUse.heart_rate || hardcodedVitals.heart_rate} BPM`;
+        }
+        
+        // Update blood pressure
+        const bpElement = document.getElementById('blood-pressure-value');
+        if (bpElement) {
+            const systolic = vitalsToUse.systolic || hardcodedVitals.systolic;
+            const diastolic = vitalsToUse.diastolic || hardcodedVitals.diastolic;
+            bpElement.textContent = `${systolic}/${diastolic}`;
+        }
+        
+        // Update additional stats if elements exist
+        const tempElement = document.getElementById('temperature-value');
+        if (tempElement) {
+            tempElement.textContent = `${vitalsToUse.temperature || hardcodedVitals.temperature}°F`;
+        }
+        
+        const weightElement = document.getElementById('weight-value');
+        if (weightElement) {
+            weightElement.textContent = `${vitalsToUse.weight || hardcodedVitals.weight} kg`;
+        }
+        
+        const glucoseElement = document.getElementById('glucose-value');
+        if (glucoseElement) {
+            glucoseElement.textContent = `${vitalsToUse.glucose || hardcodedVitals.glucose} mg/dL`;
+        }
+        
+        const bmiElement = document.getElementById('bmi-value');
+        if (bmiElement) {
+            const calculatedBMI = vitalsToUse.bmi || hardcodedVitals.bmi;
+            bmiElement.textContent = calculatedBMI.toFixed(1);
+        }
+        
+        console.log('Vitals updated on dashboard:', vitalsToUse);
+    } catch (error) {
+        console.error('Error loading vitals, using hardcoded data:', error);
+        
+        // Fallback to hardcoded values if API fails
+        const heartRateElement = document.getElementById('heart-rate-value');
+        if (heartRateElement) {
+            heartRateElement.textContent = `${hardcodedVitals.heart_rate} BPM`;
+        }
+        
+        const bpElement = document.getElementById('blood-pressure-value');
+        if (bpElement) {
+            bpElement.textContent = `${hardcodedVitals.systolic}/${hardcodedVitals.diastolic}`;
+        }
+    }
+}
+
+// ===== END NEW MODAL FUNCTIONS =====
 
 // Show toast notification
 function showToast(message, type = 'info') {

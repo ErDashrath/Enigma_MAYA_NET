@@ -4,10 +4,62 @@ Serializers for vitals app - Risk prediction and vitals validation
 from rest_framework import serializers
 
 
+class DiabetesAssessmentSerializer(serializers.Serializer):
+    """
+    Dedicated serializer for diabetes risk assessment using SVM model
+    Contains all 8 parameters required by the Pima Indians Diabetes dataset model
+    """
+    pregnancies = serializers.IntegerField(
+        min_value=0, max_value=20, 
+        help_text="Number of times pregnant"
+    )
+    glucose = serializers.FloatField(
+        min_value=40, max_value=600, 
+        help_text="Plasma glucose concentration (mg/dL)"
+    )
+    blood_pressure = serializers.IntegerField(
+        min_value=40, max_value=200, 
+        help_text="Diastolic blood pressure (mmHg)"
+    )
+    skin_thickness = serializers.FloatField(
+        min_value=0, max_value=100, 
+        help_text="Triceps skinfold thickness (mm)"
+    )
+    insulin = serializers.FloatField(
+        min_value=0, max_value=1000, 
+        help_text="2-Hour serum insulin (mu U/ml)"
+    )
+    bmi = serializers.FloatField(
+        min_value=10, max_value=60, 
+        help_text="Body Mass Index (weight in kg/(height in m)^2)"
+    )
+    diabetes_pedigree_function = serializers.FloatField(
+        min_value=0, max_value=3, 
+        help_text="Diabetes pedigree function (family history factor)"
+    )
+    age = serializers.IntegerField(
+        min_value=1, max_value=150, 
+        help_text="Age in years"
+    )
+
+    def validate(self, data):
+        """Additional validation for diabetes assessment"""
+        # Check for realistic glucose levels
+        if data['glucose'] > 400:
+            raise serializers.ValidationError("Glucose level seems extremely high. Please verify.")
+        
+        # Check BMI consistency
+        if data['bmi'] < 15 or data['bmi'] > 50:
+            raise serializers.ValidationError("BMI value seems unrealistic. Please verify.")
+        
+        return data
+
+
 class RiskInputSerializer(serializers.Serializer):
     """
     Serializer for risk prediction input validation
     Validates patient vitals, lifestyle, and history data for ML risk assessment
+    Enhanced with diabetes-specific parameters for SVM model integration
     """
     
     # Required vitals
@@ -20,6 +72,16 @@ class RiskInputSerializer(serializers.Serializer):
     blood_glucose = serializers.FloatField(min_value=40, max_value=600, required=False, help_text="Blood glucose (mg/dL)")
     oxygen_saturation = serializers.FloatField(min_value=70, max_value=100, required=False, help_text="Oxygen saturation (%)")
     bmi = serializers.FloatField(min_value=10, max_value=60, required=False, help_text="Body Mass Index")
+    
+    # ===== DIABETES SVM MODEL SPECIFIC PARAMETERS =====
+    # These parameters are specifically used by the diabetes SVM classifier
+    pregnancies = serializers.IntegerField(min_value=0, max_value=20, required=False, help_text="Number of pregnancies (diabetes risk factor)")
+    glucose = serializers.FloatField(min_value=40, max_value=600, required=False, help_text="Glucose level for diabetes assessment (mg/dL)")
+    blood_pressure = serializers.IntegerField(min_value=40, max_value=200, required=False, help_text="Blood pressure for diabetes model (mmHg)")
+    skin_thickness = serializers.FloatField(min_value=0, max_value=100, required=False, help_text="Triceps skinfold thickness (mm)")
+    insulin = serializers.FloatField(min_value=0, max_value=1000, required=False, help_text="2-Hour serum insulin (mu U/ml)")
+    diabetes_pedigree_function = serializers.FloatField(min_value=0, max_value=3, required=False, help_text="Diabetes pedigree function (family history score)")
+    # ===== END DIABETES PARAMETERS =====
     
     # Optional lifestyle metrics
     daily_steps = serializers.IntegerField(min_value=0, max_value=100000, required=False, help_text="Daily steps count")
