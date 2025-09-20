@@ -16,6 +16,7 @@ class RegisterSchema(Schema):
     password: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    user_type: Optional[str] = None
 
 
 class UserSchema(Schema):

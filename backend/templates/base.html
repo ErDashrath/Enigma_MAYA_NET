@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}VitalCircle - Predictive Chronic Care{% endblock %}</title>
+    
+    <!-- TailwindCSS + DaisyUI from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .health-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .stability-good {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .stability-warning {
+            background: linear-gradient(135deg, #fad961 0%, #f76b1c 100%);
+        }
+        .stability-danger {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-base-100">
+    <!-- Navigation Bar -->
+    <div class="navbar bg-primary text-primary-content shadow-lg">
+        <div class="navbar-start">
+            <div class="dropdown">
+                <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
+                    </svg>
+                </div>
+                <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    <li><a href="{% url 'dashboard' %}" class="text-base-content">Dashboard</a></li>
+                    <li><a href="{% url 'vitals' %}" class="text-base-content">Vitals</a></li>
+                    <li><a href="{% url 'reports' %}" class="text-base-content">Reports</a></li>
+                </ul>
+            </div>
+            <a href="{% url 'home' %}" class="btn btn-ghost text-xl">
+                <i class="fas fa-heartbeat mr-2"></i>
+                VitalCircle
+            </a>
+        </div>
+        
+        <div class="navbar-center hidden lg:flex">
+            <ul class="menu menu-horizontal px-1">
+                <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                <li><a href="{% url 'vitals' %}">Vitals</a></li>
+                <li><a href="{% url 'reports' %}">Reports</a></li>
+            </ul>
+        </div>
+        
+        <div class="navbar-end">
+            {% if user.is_authenticated %}
+                <div class="dropdown dropdown-end">
+                    <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
+                        <div class="w-10 rounded-full bg-secondary flex items-center justify-center">
+                            <i class="fas fa-user text-secondary-content"></i>
+                        </div>
+                    </div>
+                    <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                        <li class="menu-title text-base-content">{{ user.username }}</li>
+                        <li><a href="{% url 'profile' %}" class="text-base-content">Profile</a></li>
+                        <li><a href="{% url 'logout' %}" class="text-base-content">Logout</a></li>
+                    </ul>
+                </div>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
+                <a href="{% url 'register' %}" class="btn btn-accent ml-2">Register</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer footer-center p-10 bg-primary text-primary-content">
+        <aside>
+            <i class="fas fa-heartbeat text-4xl mb-4"></i>
+            <p class="font-bold">
+                VitalCircle - Predictive Chronic Care Ecosystem
+            </p>
+            <p>Empowering patients with AI-driven health insights</p>
+            <p class="text-sm opacity-75">Built for Enigma Hackathon 2025 by Team MAYA_NET</p>
+        </aside>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

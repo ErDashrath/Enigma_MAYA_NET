@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign Up - VitalCircle{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100">
+                <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Create your account
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Join VitalCircle to access healthcare services
+            </p>
+        </div>
+        
+        <form class="mt-8 space-y-6" id="registerForm">
+            {% csrf_token %}
+            
+            <!-- Alert for messages -->
+            <div id="alert" class="alert alert-error hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span id="alertMessage"></span>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- First Name -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-medium text-gray-700">First Name</span>
+                    </label>
+                    <input type="text" name="first_name" id="first_name" required
+                           class="input input-bordered w-full focus:input-primary"
+                           placeholder="Enter your first name">
+                </div>
+                
+                <!-- Last Name -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-medium text-gray-700">Last Name</span>
+                    </label>
+                    <input type="text" name="last_name" id="last_name" required
+                           class="input input-bordered w-full focus:input-primary"
+                           placeholder="Enter your last name">
+                </div>
+                
+                <!-- Username -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-medium text-gray-700">Username</span>
+                    </label>
+                    <input type="text" name="username" id="username" required
+                           class="input input-bordered w-full focus:input-primary"
+                           placeholder="Choose a username">
+                </div>
+                
+                <!-- Email -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-medium text-gray-700">Email address</span>
+                    </label>
+                    <input type="email" name="email" id="email" required
+                           class="input input-bordered w-full focus:input-primary"
+                           placeholder="Enter your email address">
+                </div>
+                
+                <!-- User Type -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-medium text-gray-700">I am a</span>
+                    </label>
+                    <select name="user_type" id="user_type" required
+                            class="select select-bordered w-full focus:select-primary">
+                        <option value="">Select your role</option>
+                        <option value="patient">Patient</option>
+                        <option value="clinician">Clinician</option>
+                    </select>
+                </div>
+                
+                <!-- Password -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-medium text-gray-700">Password</span>
+                    </label>
+                    <input type="password" name="password" id="password" required
+                           class="input input-bordered w-full focus:input-primary"
+                           placeholder="Create a strong password">
+                    <label class="label">
+                        <span class="label-text-alt text-gray-500">Minimum 8 characters</span>
+                    </label>
+                </div>
+                
+                <!-- Confirm Password -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-medium text-gray-700">Confirm Password</span>
+                    </label>
+                    <input type="password" name="password_confirm" id="password_confirm" required
+                           class="input input-bordered w-full focus:input-primary"
+                           placeholder="Confirm your password">
+                </div>
+            </div>
+            
+            <!-- Terms and Conditions -->
+            <div class="form-control">
+                <label class="cursor-pointer label justify-start gap-3">
+                    <input type="checkbox" name="terms" id="terms" required class="checkbox checkbox-primary" />
+                    <span class="label-text text-sm text-gray-600">
+                        I agree to the <a href="#" class="link link-primary">Terms of Service</a> and 
+                        <a href="#" class="link link-primary">Privacy Policy</a>
+                    </span>
+                </label>
+            </div>
+            
+            <!-- Submit Button -->
+            <div>
+                <button type="submit" 
+                        class="btn btn-primary w-full text-white font-medium py-3" 
+                        id="submitBtn">
+                    <span id="submitText">Create Account</span>
+                    <span id="submitLoading" class="loading loading-spinner loading-sm hidden"></span>
+                </button>
+            </div>
+            
+            <!-- Sign In Link -->
+            <div class="text-center">
+                <p class="text-sm text-gray-600">
+                    Already have an account? 
+                    <a href="{% url 'login' %}" class="link link-primary font-medium">Sign in here</a>
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Get form elements
+    const submitBtn = document.getElementById('submitBtn');
+    const submitText = document.getElementById('submitText');
+    const submitLoading = document.getElementById('submitLoading');
+    const alert = document.getElementById('alert');
+    const alertMessage = document.getElementById('alertMessage');
+    
+    // Hide any previous alerts
+    alert.classList.add('hidden');
+    alert.classList.remove('alert-error', 'alert-success');
+    
+    // Validate passwords match
+    const password = document.getElementById('password').value;
+    const passwordConfirm = document.getElementById('password_confirm').value;
+    
+    if (password !== passwordConfirm) {
+        alert.classList.remove('hidden');
+        alert.classList.add('alert-error');
+        alertMessage.textContent = 'Passwords do not match';
+        return;
+    }
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitText.classList.add('hidden');
+    submitLoading.classList.remove('hidden');
+    
+    try {
+        const requestData = {
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            password: password,
+            first_name: document.getElementById('first_name').value,
+            last_name: document.getElementById('last_name').value,
+            user_type: document.getElementById('user_type').value
+        };
+        
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.access_token) {
+            // Success - show success message and redirect
+            alert.classList.remove('hidden', 'alert-error');
+            alert.classList.add('alert-success');
+            alertMessage.textContent = 'Account created successfully! Redirecting...';
+            
+            // Store the JWT token
+            localStorage.setItem('jwt_token', data.access_token);
+            
+            // Redirect after a short delay
+            setTimeout(() => {
+                window.location.href = '/dashboard/';
+            }, 1500);
+        } else {
+            // Error - show error message
+            alert.classList.remove('hidden', 'alert-success');
+            alert.classList.add('alert-error');
+            alertMessage.textContent = data.error || 'Registration failed. Please try again.';
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        alert.classList.remove('hidden', 'alert-success');
+        alert.classList.add('alert-error');
+        alertMessage.textContent = 'An error occurred. Please try again.';
+    } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        submitText.classList.remove('hidden');
+        submitLoading.classList.add('hidden');
+    }
+});
+
+// Real-time password confirmation validation
+document.getElementById('password_confirm').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const passwordConfirm = this.value;
+    const confirmInput = this;
+    
+    if (passwordConfirm && password !== passwordConfirm) {
+        confirmInput.classList.add('input-error');
+        confirmInput.classList.remove('input-success');
+    } else if (passwordConfirm && password === passwordConfirm) {
+        confirmInput.classList.remove('input-error');
+        confirmInput.classList.add('input-success');
+    } else {
+        confirmInput.classList.remove('input-error', 'input-success');
+    }
+});
+</script>
+{% endblock %}

@@ -1,21 +1,8 @@
 """
 URL configuration for vitalcircle project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from ninja import NinjaAPI
@@ -58,6 +45,13 @@ def register(request, payload: RegisterSchema):
             password=payload.password,
             first_name=payload.first_name or "",
             last_name=payload.last_name or ""
+        )
+        
+        # Create user profile with user_type
+        from core.models import UserProfile
+        UserProfile.objects.create(
+            user=user,
+            user_type=payload.user_type or 'patient'
         )
         
         # Create JWT token
@@ -137,5 +131,6 @@ def protected_endpoint(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', api.urls),  # All API endpoints will be under /api/
+    path('api/', api.urls),  # API endpoints under /api/
+    path('', include('core.urls')),  # Frontend template views
 ]

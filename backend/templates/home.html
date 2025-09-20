@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}VitalCircle - Home{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero min-h-[60vh] gradient-bg rounded-lg text-white">
+    <div class="hero-content text-center">
+        <div class="max-w-md">
+            <h1 class="mb-5 text-5xl font-bold">
+                <i class="fas fa-heartbeat mr-3"></i>
+                VitalCircle
+            </h1>
+            <p class="mb-5 text-lg">
+                Predictive Chronic Care Ecosystem powered by AI. 
+                Get personalized health insights and stay ahead of health risks.
+            </p>
+            {% if not user.is_authenticated %}
+                <div class="space-x-4">
+                    <a href="{% url 'register' %}" class="btn btn-secondary btn-lg">Get Started</a>
+                    <a href="{% url 'login' %}" class="btn btn-outline btn-lg text-white border-white hover:bg-white hover:text-primary">Login</a>
+                </div>
+            {% else %}
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-lg">Go to Dashboard</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+    <!-- Stability Score -->
+    <div class="card bg-base-200 shadow-xl">
+        <div class="card-body text-center">
+            <div class="text-4xl text-primary mb-4">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h2 class="card-title justify-center">Stability Score</h2>
+            <p class="text-sm opacity-75">AI-powered health risk prediction</p>
+        </div>
+    </div>
+
+    <!-- Smart Nudges -->
+    <div class="card bg-base-200 shadow-xl">
+        <div class="card-body text-center">
+            <div class="text-4xl text-secondary mb-4">
+                <i class="fas fa-brain"></i>
+            </div>
+            <h2 class="card-title justify-center">Smart Nudges</h2>
+            <p class="text-sm opacity-75">Personalized lifestyle recommendations</p>
+        </div>
+    </div>
+
+    <!-- Health Dashboard -->
+    <div class="card bg-base-200 shadow-xl">
+        <div class="card-body text-center">
+            <div class="text-4xl text-accent mb-4">
+                <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <h2 class="card-title justify-center">Health Dashboard</h2>
+            <p class="text-sm opacity-75">Visual health trends and progress</p>
+        </div>
+    </div>
+
+    <!-- Clinician Portal -->
+    <div class="card bg-base-200 shadow-xl">
+        <div class="card-body text-center">
+            <div class="text-4xl text-info mb-4">
+                <i class="fas fa-user-md"></i>
+            </div>
+            <h2 class="card-title justify-center">Clinician Portal</h2>
+            <p class="text-sm opacity-75">Professional health monitoring</p>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Section -->
+<div class="stats shadow-lg w-full mt-12">
+    <div class="stat">
+        <div class="stat-figure text-primary">
+            <i class="fas fa-users text-3xl"></i>
+        </div>
+        <div class="stat-title">Patients Monitored</div>
+        <div class="stat-value text-primary">{{ stats.total_patients|default:"1,200" }}</div>
+        <div class="stat-desc">Since launch</div>
+    </div>
+
+    <div class="stat">
+        <div class="stat-figure text-secondary">
+            <i class="fas fa-heartbeat text-3xl"></i>
+        </div>
+        <div class="stat-title">Vitals Recorded</div>
+        <div class="stat-value text-secondary">{{ stats.total_vitals|default:"25,600" }}</div>
+        <div class="stat-desc">This month</div>
+    </div>
+
+    <div class="stat">
+        <div class="stat-figure text-accent">
+            <i class="fas fa-shield-alt text-3xl"></i>
+        </div>
+        <div class="stat-title">Risk Prevented</div>
+        <div class="stat-value text-accent">89%</div>
+        <div class="stat-desc">Early detection rate</div>
+    </div>
+</div>
+
+<!-- CTA Section -->
+{% if not user.is_authenticated %}
+<div class="card bg-gradient-to-r from-primary to-secondary text-primary-content shadow-xl mt-12">
+    <div class="card-body text-center">
+        <h2 class="card-title text-2xl justify-center mb-4">Ready to take control of your health?</h2>
+        <p class="mb-6">Join thousands of patients who are already using VitalCircle to stay healthy and prevent health crises.</p>
+        <div class="card-actions justify-center">
+            <a href="{% url 'register' %}" class="btn btn-secondary btn-lg">Start Your Health Journey</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
