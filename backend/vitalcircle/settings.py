@@ -164,3 +164,8 @@ JWT_EXPIRATION_DELTA = config('JWT_EXPIRATION_DELTA', default=3600, cast=int)
 # Supabase Configuration
 SUPABASE_URL = config('SUPABASE_URL', default='')
 SUPABASE_KEY = config('SUPABASE_KEY', default='')
+
+# Authentication URLs
+LOGIN_URL = '/auth/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/'

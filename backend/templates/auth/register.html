@@ -182,35 +182,48 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             user_type: document.getElementById('user_type').value
         };
         
-        const response = await fetch('/api/auth/register', {
+        // Use FormData for template-based view
+        const formData = new FormData();
+        formData.append('username', requestData.username);
+        formData.append('email', requestData.email);
+        formData.append('password', requestData.password);
+        formData.append('first_name', requestData.first_name);
+        formData.append('last_name', requestData.last_name);
+        formData.append('user_type', requestData.user_type);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        const response = await fetch('/auth/register/', {
             method: 'POST',
+            body: formData,
             headers: {
-                'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            },
-            body: JSON.stringify(requestData)
+            }
         });
         
-        const data = await response.json();
-        
-        if (response.ok && data.access_token) {
+        // Check if response is a redirect (successful registration)
+        if (response.redirected || response.url.includes('/auth/login/')) {
             // Success - show success message and redirect
             alert.classList.remove('hidden', 'alert-error');
             alert.classList.add('alert-success');
-            alertMessage.textContent = 'Account created successfully! Redirecting...';
+            alertMessage.textContent = 'Account created successfully! Please log in.';
             
-            // Store the JWT token
-            localStorage.setItem('jwt_token', data.access_token);
-            
-            // Redirect after a short delay
+            // Redirect to login page after a short delay
             setTimeout(() => {
-                window.location.href = '/dashboard/';
+                window.location.href = '/auth/login/?message=registration_success';
             }, 1500);
         } else {
-            // Error - show error message
-            alert.classList.remove('hidden', 'alert-success');
-            alert.classList.add('alert-error');
-            alertMessage.textContent = data.error || 'Registration failed. Please try again.';
+            // Check for error response
+            const text = await response.text();
+            
+            // If it's HTML (template response), it means there were validation errors
+            if (text.includes('class="alert')) {
+                // Reload the page to show server-side errors
+                window.location.reload();
+            } else {
+                alert.classList.remove('hidden', 'alert-success');
+                alert.classList.add('alert-error');
+                alertMessage.textContent = 'Registration failed. Please try again.';
+            }
         }
     } catch (error) {
         console.error('Registration error:', error);
