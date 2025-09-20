@@ -191,6 +191,7 @@ def register_view(request):
         password = request.POST.get('password')
         first_name = request.POST.get('first_name', '')
         last_name = request.POST.get('last_name', '')
+        user_type = request.POST.get('user_type', 'patient')
         
         # Basic validation
         if User.objects.filter(username=username).exists():
@@ -208,6 +209,13 @@ def register_view(request):
             password=password,
             first_name=first_name,
             last_name=last_name
+        )
+        
+        # Create user profile with user_type
+        from .models import UserProfile
+        UserProfile.objects.create(
+            user=user,
+            user_type=user_type
         )
         
         messages.success(request, 'Registration successful! Please log in.')
