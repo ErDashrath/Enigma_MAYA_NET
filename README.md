@@ -1,5 +1,10 @@
 # Enigma_MAYA_NET
-
+team:
+Dashrath Parekar
+Kartik Shukla
+Tulasi Desai
+Vignesh Anil Thandessary
+ps:vitalCircle
 # VitalCircle – Predictive Chronic Care Ecosystem  
 
 ## 🚑 Problem Statement  
