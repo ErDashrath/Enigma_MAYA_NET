@@ -14,11 +14,12 @@ Current chronic care platforms are **reactive** and burden patients with manual 
 ---
 
 ## ⚙️ Tech Stack  
-- **Backend**: Django + Django REST Framework  
+- **Backend**: Django + Django Ninja (API)
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: JWT tokens
+- **Frontend**: React + TailwindCSS + DaisyUI  
 - **AI**: webLLM with small quantized LLM (for predictions & nudges)  
-- **Frontend**: React + TailwindCSS + Recharts  
-- **Database**: SQLite (demo), upgradeable to PostgreSQL  
-- **Auth**: Django built-in authentication  
+- **Deployment**: Vercel  
 
 ---
 
@@ -34,4 +35,45 @@ Current chronic care platforms are **reactive** and burden patients with manual 
 
 ## 🚀 Quick Start  
 
-//To be implemented.
+### Backend Setup (Django + Supabase)
+
+1. **Clone the repository:**
+```bash
+git clone https://github.com/ErDashrath/Enigma_MAYA_NET.git
+cd Enigma_MAYA_NET
+```
+
+2. **Set up Python environment:**
+```bash
+cd backend
+python -m venv ../venv
+../venv/Scripts/activate  # Windows
+pip install -r requirements.txt
+```
+
+3. **Configure environment:**
+```bash
+cp .env.example .env
+# Edit .env with your Supabase credentials
+```
+
+4. **Run migrations:**
+```bash
+python manage.py migrate
+python manage.py createsuperuser  # optional
+```
+
+5. **Start development server:**
+```bash
+python manage.py runserver
+```
+
+### API Endpoints
+
+- `GET /api/health` - Health check
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login (returns JWT)
+- `GET /api/auth/me` - Get current user (requires JWT)
+- `GET /api/docs` - Interactive API documentation
+
+**Team**: MAYA_NET | **Event**: Enigma Hackathon 2025

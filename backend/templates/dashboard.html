@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - VitalCircle{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">VitalCircle Dashboard</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="dropdown dropdown-end">
+                        <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
+                            <div class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center">
+                                {{ user.first_name.0|default:user.username.0|upper }}
+                            </div>
+                        </div>
+                        <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                            <li class="menu-title">
+                                <span>{{ user.first_name }} {{ user.last_name }}</span>
+                            </li>
+                            <li><a href="/profile/">Profile</a></li>
+                            <li><a href="/settings/">Settings</a></li>
+                            <li><a href="{% url 'logout' %}">Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Welcome Section -->
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-900">
+                Welcome back, {{ user.first_name|default:user.username }}!
+            </h2>
+            <p class="mt-2 text-gray-600">
+                {% if user.userprofile.user_type == 'patient' %}
+                    Monitor your health vitals and connect with healthcare providers.
+                {% elif user.userprofile.user_type == 'clinician' %}
+                    Manage your patients and review health data.
+                {% else %}
+                    Manage your healthcare journey with VitalCircle.
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {% if user.userprofile.user_type == 'patient' %}
+                <!-- Patient Stats -->
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-figure text-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-title">Heart Rate</div>
+                        <div class="stat-value text-primary">--</div>
+                        <div class="stat-desc">Last reading</div>
+                    </div>
+                </div>
+                
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-figure text-secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-title">Blood Pressure</div>
+                        <div class="stat-value text-secondary">--/--</div>
+                        <div class="stat-desc">mmHg</div>
+                    </div>
+                </div>
+                
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-figure text-accent">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-title">Appointments</div>
+                        <div class="stat-value text-accent">0</div>
+                        <div class="stat-desc">Upcoming</div>
+                    </div>
+                </div>
+                
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-figure text-info">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-title">AI Insights</div>
+                        <div class="stat-value text-info">0</div>
+                        <div class="stat-desc">New recommendations</div>
+                    </div>
+                </div>
+            {% else %}
+                <!-- Clinician Stats -->
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-figure text-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-title">Patients</div>
+                        <div class="stat-value text-primary">0</div>
+                        <div class="stat-desc">Active patients</div>
+                    </div>
+                </div>
+                
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-figure text-secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-title">Appointments</div>
+                        <div class="stat-value text-secondary">0</div>
+                        <div class="stat-desc">Today</div>
+                    </div>
+                </div>
+                
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-figure text-accent">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-title">Reports</div>
+                        <div class="stat-value text-accent">0</div>
+                        <div class="stat-desc">Pending review</div>
+                    </div>
+                </div>
+                
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-figure text-info">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-title">Alerts</div>
+                        <div class="stat-value text-info">0</div>
+                        <div class="stat-desc">Critical alerts</div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title">Quick Actions</h3>
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        {% if user.userprofile.user_type == 'patient' %}
+                            <button class="btn btn-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                Log Vitals
+                            </button>
+                            <button class="btn btn-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Book Appointment
+                            </button>
+                            <button class="btn btn-accent">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                View Reports
+                            </button>
+                            <button class="btn btn-info">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                AI Insights
+                            </button>
+                        {% else %}
+                            <button class="btn btn-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                Manage Patients
+                            </button>
+                            <button class="btn btn-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Schedule
+                            </button>
+                            <button class="btn btn-accent">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Reports
+                            </button>
+                            <button class="btn btn-info">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Alerts
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title">Recent Activity</h3>
+                    <div class="space-y-4 mt-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="avatar placeholder">
+                                <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
+                                    <span class="text-xs">AI</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-600">Welcome to VitalCircle! Your health journey starts here.</p>
+                                <p class="text-xs text-gray-400">Just now</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h3 class="card-title">Getting Started</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                    {% if user.userprofile.user_type == 'patient' %}
+                        <div class="text-center p-4">
+                            <div class="w-16 h-16 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <h4 class="font-semibold mb-2">Complete Your Profile</h4>
+                            <p class="text-sm text-gray-600">Add your medical history and contact information</p>
+                        </div>
+                        <div class="text-center p-4">
+                            <div class="w-16 h-16 bg-secondary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                            </div>
+                            <h4 class="font-semibold mb-2">Log Your First Vitals</h4>
+                            <p class="text-sm text-gray-600">Start tracking your health metrics</p>
+                        </div>
+                        <div class="text-center p-4">
+                            <div class="w-16 h-16 bg-accent bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <h4 class="font-semibold mb-2">Schedule Appointment</h4>
+                            <p class="text-sm text-gray-600">Connect with healthcare providers</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center p-4">
+                            <div class="w-16 h-16 bg-primary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <h4 class="font-semibold mb-2">Set Up Your Practice</h4>
+                            <p class="text-sm text-gray-600">Add your credentials and specializations</p>
+                        </div>
+                        <div class="text-center p-4">
+                            <div class="w-16 h-16 bg-secondary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                            </div>
+                            <h4 class="font-semibold mb-2">Add Patients</h4>
+                            <p class="text-sm text-gray-600">Start building your patient list</p>
+                        </div>
+                        <div class="text-center p-4">
+                            <div class="w-16 h-16 bg-accent bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <h4 class="font-semibold mb-2">Configure Schedule</h4>
+                            <p class="text-sm text-gray-600">Set your availability for appointments</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
