@@ -17,6 +17,11 @@ python-decouple==3.8
 # CORS
 django-cors-headers==4.4.0
 
+# Machine Learning for Diabetes Model
+scikit-learn==1.3.2
+pandas==2.1.4
+numpy==1.24.4
+
 # Supabase (optional, for additional features)
 supabase==2.7.4
 

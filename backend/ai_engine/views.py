@@ -6,11 +6,15 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta
 import json
 import random
 
-from .models import StabilityScore, HealthPrediction, SmartNudge, ModelPerformance
+from .models import (
+    StabilityScore, HealthPrediction, SmartNudge, ModelPerformance,
+    MedicineAlert, MedicineIntake, AIHealthNudge, WebLLMSession
+)
 from patients.models import PatientProfile
 from vitals.models import VitalSigns, LifestyleMetrics
 
@@ -507,3 +511,499 @@ def generate_predictions(request):
         
     except PatientProfile.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Patient profile not found'})
+
+
+# Medicine Alert API Views
+@login_required
+@csrf_exempt
+def medicine_alerts_api(request):
+    """API endpoint for medicine alerts CRUD operations"""
+    if request.method == 'GET':
+        # Get user's medicine alerts
+        alerts = MedicineAlert.objects.filter(
+            patient=request.user,
+            status='active'
+        ).order_by('-created_at')
+        
+        alerts_data = []
+        for alert in alerts:
+            alerts_data.append({
+                'id': alert.id,
+                'medicine_name': alert.medicine_name,
+                'dosage': alert.dosage,
+                'form': alert.form,
+                'instructions': alert.instructions,
+                'alert_type': alert.alert_type,
+                'times_per_day': alert.times_per_day,
+                'alert_times': alert.alert_times,
+                'priority': alert.priority,
+                'start_date': alert.start_date.isoformat(),
+                'end_date': alert.end_date.isoformat() if alert.end_date else None,
+                'is_enabled': alert.is_enabled,
+                'enable_ai_nudges': alert.enable_ai_nudges,
+                'created_at': alert.created_at.isoformat()
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'alerts': alerts_data
+        })
+    
+    elif request.method == 'POST':
+        # Create new medicine alert
+        try:
+            data = json.loads(request.body)
+            
+            alert = MedicineAlert.objects.create(
+                patient=request.user,
+                medicine_name=data.get('medicine_name'),
+                dosage=data.get('dosage'),
+                form=data.get('form', 'tablet'),
+                instructions=data.get('instructions', ''),
+                alert_type=data.get('alert_type', 'daily'),
+                times_per_day=data.get('times_per_day', 1),
+                alert_times=data.get('alert_times', []),
+                priority=data.get('priority', 'medium'),
+                reminder_before_minutes=data.get('reminder_before_minutes', 0),
+                snooze_duration=data.get('snooze_duration', 15),
+                start_date=datetime.strptime(data.get('start_date'), '%Y-%m-%d').date(),
+                end_date=datetime.strptime(data.get('end_date'), '%Y-%m-%d').date() if data.get('end_date') else None,
+                enable_ai_nudges=data.get('enable_ai_nudges', True),
+                created_by=request.user
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'alert_id': alert.id,
+                'message': 'Medicine alert created successfully'
+            })
+        
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+
+@login_required
+@csrf_exempt
+def medicine_alert_detail_api(request, alert_id):
+    """API endpoint for individual medicine alert operations"""
+    try:
+        alert = MedicineAlert.objects.get(
+            id=alert_id,
+            patient=request.user
+        )
+    except MedicineAlert.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Medicine alert not found'
+        }, status=404)
+    
+    if request.method == 'GET':
+        return JsonResponse({
+            'success': True,
+            'alert': {
+                'id': alert.id,
+                'medicine_name': alert.medicine_name,
+                'dosage': alert.dosage,
+                'form': alert.form,
+                'instructions': alert.instructions,
+                'alert_type': alert.alert_type,
+                'times_per_day': alert.times_per_day,
+                'alert_times': alert.alert_times,
+                'priority': alert.priority,
+                'start_date': alert.start_date.isoformat(),
+                'end_date': alert.end_date.isoformat() if alert.end_date else None,
+                'status': alert.status,
+                'is_enabled': alert.is_enabled,
+                'enable_ai_nudges': alert.enable_ai_nudges
+            }
+        })
+    
+    elif request.method == 'PUT':
+        # Update medicine alert
+        try:
+            data = json.loads(request.body)
+            
+            # Update fields
+            for field in ['medicine_name', 'dosage', 'form', 'instructions', 
+                         'alert_type', 'times_per_day', 'alert_times', 'priority',
+                         'is_enabled', 'enable_ai_nudges']:
+                if field in data:
+                    setattr(alert, field, data[field])
+            
+            if 'start_date' in data:
+                alert.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+            
+            if 'end_date' in data and data['end_date']:
+                alert.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+            
+            alert.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Medicine alert updated successfully'
+            })
+        
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+    
+    elif request.method == 'DELETE':
+        # Delete medicine alert
+        alert.status = 'cancelled'
+        alert.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Medicine alert cancelled successfully'
+        })
+
+
+@login_required
+@csrf_exempt
+def record_medicine_intake_api(request):
+    """API endpoint to record medicine intake"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            alert = MedicineAlert.objects.get(
+                id=data.get('alert_id'),
+                patient=request.user
+            )
+            
+            intake = MedicineIntake.objects.create(
+                alert=alert,
+                patient=request.user,
+                scheduled_time=datetime.fromisoformat(data.get('scheduled_time')),
+                actual_time=datetime.fromisoformat(data.get('actual_time')) if data.get('actual_time') else timezone.now(),
+                status=data.get('status', 'taken'),
+                dosage_taken=data.get('dosage_taken', ''),
+                notes=data.get('notes', ''),
+                side_effects=data.get('side_effects', ''),
+                mood_before=data.get('mood_before'),
+                mood_after=data.get('mood_after'),
+                ai_nudge_used=data.get('ai_nudge_used', False),
+                nudge_effectiveness=data.get('nudge_effectiveness')
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'intake_id': intake.id,
+                'message': 'Medicine intake recorded successfully'
+            })
+        
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+
+@login_required
+def medicine_intake_history_api(request):
+    """API endpoint to get medicine intake history"""
+    alert_id = request.GET.get('alert_id')
+    days = int(request.GET.get('days', 7))
+    
+    # Get intake history
+    query = MedicineIntake.objects.filter(patient=request.user)
+    
+    if alert_id:
+        query = query.filter(alert_id=alert_id)
+    
+    since_date = timezone.now() - timedelta(days=days)
+    query = query.filter(scheduled_time__gte=since_date)
+    
+    intakes = query.order_by('-scheduled_time')
+    
+    intake_data = []
+    for intake in intakes:
+        intake_data.append({
+            'id': intake.id,
+            'alert_id': intake.alert.id,
+            'medicine_name': intake.alert.medicine_name,
+            'scheduled_time': intake.scheduled_time.isoformat(),
+            'actual_time': intake.actual_time.isoformat() if intake.actual_time else None,
+            'status': intake.status,
+            'dosage_taken': intake.dosage_taken,
+            'notes': intake.notes,
+            'side_effects': intake.side_effects,
+            'mood_before': intake.mood_before,
+            'mood_after': intake.mood_after,
+            'ai_nudge_used': intake.ai_nudge_used
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'intakes': intake_data
+    })
+
+
+# WebLLM AI Nudge API Views
+@login_required
+@csrf_exempt
+def generate_ai_nudge_api(request):
+    """API endpoint to generate AI nudge using WebLLM"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Get medicine alert if specified
+            medicine_alert = None
+            if data.get('alert_id'):
+                medicine_alert = MedicineAlert.objects.get(
+                    id=data.get('alert_id'),
+                    patient=request.user
+                )
+            
+            # Gather context for AI generation
+            context = _gather_patient_context(request.user, medicine_alert)
+            
+            # Create nudge record
+            nudge = AIHealthNudge.objects.create(
+                patient=request.user,
+                medicine_alert=medicine_alert,
+                nudge_type=data.get('nudge_type', 'medicine_reminder'),
+                title=data.get('title', 'Health Reminder'),
+                message=data.get('message', ''),  # Will be filled by WebLLM
+                model_used=data.get('model_used', 'WebLLM-Local'),
+                prompt_context=context,
+                patient_history=context.get('patient_history', {}),
+                current_context=context.get('current_context', {}),
+                behavioral_patterns=context.get('behavioral_patterns', {}),
+                scheduled_for=timezone.now(),
+                expires_at=timezone.now() + timedelta(hours=6),
+                delivery_method=data.get('delivery_method', 'dashboard_toast')
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'nudge_id': nudge.id,
+                'context': context,
+                'message': 'AI nudge generation initiated'
+            })
+        
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+
+@login_required
+@csrf_exempt
+def update_ai_nudge_api(request, nudge_id):
+    """API endpoint to update AI nudge with generated content"""
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            
+            nudge = AIHealthNudge.objects.get(
+                id=nudge_id,
+                patient=request.user
+            )
+            
+            # Update nudge with AI-generated content
+            nudge.message = data.get('message', nudge.message)
+            nudge.action_suggestion = data.get('action_suggestion', '')
+            nudge.generation_tokens = data.get('generation_tokens', 0)
+            nudge.generation_time_ms = data.get('generation_time_ms', 0)
+            nudge.status = 'generated'
+            
+            nudge.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'AI nudge updated successfully'
+            })
+        
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+
+@login_required
+def get_ai_nudges_api(request):
+    """API endpoint to get active AI nudges"""
+    # Get active nudges for the user
+    nudges = AIHealthNudge.objects.filter(
+        patient=request.user,
+        status__in=['generated', 'delivered'],
+        expires_at__gt=timezone.now()
+    ).order_by('-created_at')[:10]
+    
+    nudges_data = []
+    for nudge in nudges:
+        nudges_data.append({
+            'id': nudge.id,
+            'nudge_type': nudge.nudge_type,
+            'title': nudge.title,
+            'message': nudge.message,
+            'action_suggestion': nudge.action_suggestion,
+            'delivery_method': nudge.delivery_method,
+            'scheduled_for': nudge.scheduled_for.isoformat(),
+            'created_at': nudge.created_at.isoformat(),
+            'medicine_alert_id': nudge.medicine_alert.id if nudge.medicine_alert else None
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'nudges': nudges_data
+    })
+
+
+@login_required
+@csrf_exempt
+def nudge_interaction_api(request, nudge_id):
+    """API endpoint to track nudge interactions"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            nudge = AIHealthNudge.objects.get(
+                id=nudge_id,
+                patient=request.user
+            )
+            
+            interaction_type = data.get('interaction_type')
+            
+            if interaction_type == 'viewed':
+                nudge.viewed_at = timezone.now()
+                nudge.status = 'viewed'
+            elif interaction_type == 'acted_upon':
+                nudge.acted_upon_at = timezone.now()
+                nudge.status = 'acted_upon'
+                nudge.led_to_action = True
+                nudge.action_type = data.get('action_type', '')
+            elif interaction_type == 'dismissed':
+                nudge.status = 'dismissed'
+            
+            if data.get('user_rating'):
+                nudge.user_rating = data.get('user_rating')
+            
+            nudge.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Nudge interaction recorded'
+            })
+        
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+
+@login_required
+@csrf_exempt
+def webllm_session_api(request):
+    """API endpoint to track WebLLM usage sessions"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            if data.get('action') == 'start':
+                # Start new session
+                session = WebLLMSession.objects.create(
+                    patient=request.user,
+                    session_type=data.get('session_type', 'general_chat'),
+                    model_id=data.get('model_id', ''),
+                    model_size=data.get('model_size', ''),
+                    initial_prompt=data.get('initial_prompt', ''),
+                    browser_info=data.get('browser_info', {}),
+                    device_info=data.get('device_info', {})
+                )
+                
+                return JsonResponse({
+                    'success': True,
+                    'session_id': session.id
+                })
+            
+            elif data.get('action') == 'end':
+                # End existing session
+                session = WebLLMSession.objects.get(
+                    id=data.get('session_id'),
+                    patient=request.user
+                )
+                
+                session.session_end = timezone.now()
+                session.total_messages = data.get('total_messages', 0)
+                session.total_tokens_generated = data.get('total_tokens_generated', 0)
+                session.average_response_time_ms = data.get('average_response_time_ms', 0)
+                session.total_generation_time_ms = data.get('total_generation_time_ms', 0)
+                session.conversation_summary = data.get('conversation_summary', '')
+                session.user_rating = data.get('user_rating')
+                session.feedback = data.get('feedback', '')
+                session.performance_stats = data.get('performance_stats', {})
+                
+                session.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Session ended successfully'
+                })
+        
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+
+def _gather_patient_context(user, medicine_alert=None):
+    """Helper function to gather patient context for AI nudge generation"""
+    context = {
+        'patient_history': {},
+        'current_context': {},
+        'behavioral_patterns': {}
+    }
+    
+    # Get recent medicine intake history
+    if medicine_alert:
+        recent_intakes = MedicineIntake.objects.filter(
+            alert=medicine_alert,
+            scheduled_time__gte=timezone.now() - timedelta(days=7)
+        )
+        
+        total_scheduled = recent_intakes.count()
+        taken_count = recent_intakes.filter(status='taken').count()
+        adherence_rate = (taken_count / total_scheduled * 100) if total_scheduled > 0 else 100
+        
+        context['patient_history']['adherence_rate'] = adherence_rate
+        context['patient_history']['recent_missed'] = recent_intakes.filter(status='missed').count()
+        context['patient_history']['total_scheduled'] = total_scheduled
+        
+        # Get last intake
+        last_intake = recent_intakes.order_by('-scheduled_time').first()
+        if last_intake:
+            context['current_context']['last_intake_status'] = last_intake.status
+            context['current_context']['days_since_last_intake'] = (timezone.now() - last_intake.scheduled_time).days
+    
+    # Get general health patterns
+    try:
+        from patients.models import PatientProfile
+        patient_profile = PatientProfile.objects.get(user=user)
+        context['patient_history']['chronic_conditions'] = getattr(patient_profile, 'chronic_conditions', [])
+    except PatientProfile.DoesNotExist:
+        pass
+    
+    # Current time context
+    current_hour = timezone.now().hour
+    if current_hour < 12:
+        context['current_context']['time_of_day'] = 'morning'
+    elif current_hour < 17:
+        context['current_context']['time_of_day'] = 'afternoon'
+    elif current_hour < 21:
+        context['current_context']['time_of_day'] = 'evening'
+    else:
+        context['current_context']['time_of_day'] = 'night'
+    
+    return context

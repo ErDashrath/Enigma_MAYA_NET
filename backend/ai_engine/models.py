@@ -3,7 +3,325 @@ AI Engine models for VitalCircle's predictive analytics
 """
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import User
 from patients.models import PatientProfile
+
+
+class MedicineAlert(models.Model):
+    """Medicine intake alerts and scheduling"""
+    ALERT_TYPES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('as_needed', 'As Needed'),
+        ('custom', 'Custom Schedule'),
+    ]
+    
+    PRIORITY_LEVELS = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('paused', 'Paused'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='medicine_alerts')
+    
+    # Medicine Details
+    medicine_name = models.CharField(max_length=100)
+    dosage = models.CharField(max_length=50, help_text="e.g., '10mg', '2 tablets'")
+    form = models.CharField(max_length=30, default='tablet', help_text="tablet, capsule, liquid, injection, etc.")
+    instructions = models.TextField(blank=True, help_text="Special instructions for taking the medicine")
+    
+    # Scheduling
+    alert_type = models.CharField(max_length=15, choices=ALERT_TYPES, default='daily')
+    times_per_day = models.IntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(10)])
+    alert_times = models.JSONField(
+        default=list, 
+        help_text="List of times in HH:MM format, e.g., ['08:00', '14:00', '20:00']"
+    )
+    
+    # Custom scheduling for complex schedules
+    custom_schedule = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Custom schedule configuration for complex patterns"
+    )
+    
+    # Alert Settings
+    priority = models.CharField(max_length=10, choices=PRIORITY_LEVELS, default='medium')
+    reminder_before_minutes = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(120)],
+        help_text="Minutes before scheduled time to send reminder"
+    )
+    snooze_duration = models.IntegerField(
+        default=15,
+        validators=[MinValueValidator(5), MaxValueValidator(60)],
+        help_text="Snooze duration in minutes"
+    )
+    
+    # Duration
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True, help_text="Leave blank for ongoing medication")
+    
+    # Status
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='active')
+    is_enabled = models.BooleanField(default=True)
+    
+    # WebLLM Integration
+    enable_ai_nudges = models.BooleanField(
+        default=True, 
+        help_text="Enable AI-generated contextual nudges for this medication"
+    )
+    ai_context = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Context data for AI nudge generation"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        related_name='created_medicine_alerts'
+    )
+    
+    class Meta:
+        db_table = 'ai_medicine_alerts'
+        verbose_name = 'Medicine Alert'
+        verbose_name_plural = 'Medicine Alerts'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.patient.username} - {self.medicine_name} ({self.alert_type})"
+
+
+class MedicineIntake(models.Model):
+    """Track actual medicine intake events"""
+    INTAKE_STATUS = [
+        ('taken', 'Taken'),
+        ('missed', 'Missed'),
+        ('partial', 'Partial'),
+        ('late', 'Late'),
+        ('skipped', 'Intentionally Skipped'),
+    ]
+    
+    alert = models.ForeignKey(MedicineAlert, on_delete=models.CASCADE, related_name='intake_records')
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='medicine_intakes')
+    
+    # Scheduled vs Actual
+    scheduled_time = models.DateTimeField(help_text="When the medicine was scheduled to be taken")
+    actual_time = models.DateTimeField(null=True, blank=True, help_text="When the medicine was actually taken")
+    
+    # Status
+    status = models.CharField(max_length=15, choices=INTAKE_STATUS)
+    dosage_taken = models.CharField(
+        max_length=50, 
+        blank=True, 
+        help_text="Actual dosage taken if different from scheduled"
+    )
+    
+    # Context
+    notes = models.TextField(blank=True, help_text="Patient notes about this intake")
+    side_effects = models.TextField(blank=True, help_text="Any side effects experienced")
+    mood_before = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Mood rating before taking medicine (1-5)"
+    )
+    mood_after = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Mood rating after taking medicine (1-5)"
+    )
+    
+    # WebLLM Context
+    ai_nudge_used = models.BooleanField(default=False, help_text="Was an AI nudge involved in this intake?")
+    nudge_effectiveness = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="How effective was the AI nudge? (1-5)"
+    )
+    
+    # Metadata
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'ai_medicine_intakes'
+        verbose_name = 'Medicine Intake'
+        verbose_name_plural = 'Medicine Intakes'
+        ordering = ['-scheduled_time']
+    
+    def __str__(self):
+        return f"{self.patient.username} - {self.alert.medicine_name} - {self.status}"
+
+
+class AIHealthNudge(models.Model):
+    """AI-generated contextual health nudges using WebLLM"""
+    NUDGE_TYPES = [
+        ('medicine_reminder', 'Medicine Reminder'),
+        ('adherence_encouragement', 'Adherence Encouragement'),
+        ('side_effect_guidance', 'Side Effect Guidance'),
+        ('lifestyle_suggestion', 'Lifestyle Suggestion'),
+        ('motivation', 'Motivational Message'),
+        ('educational', 'Educational Content'),
+        ('appointment_reminder', 'Appointment Reminder'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('generated', 'Generated'),
+        ('delivered', 'Delivered'),
+        ('viewed', 'Viewed'),
+        ('acted_upon', 'Acted Upon'),
+        ('dismissed', 'Dismissed'),
+        ('expired', 'Expired'),
+    ]
+    
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_nudges')
+    medicine_alert = models.ForeignKey(
+        MedicineAlert, 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        related_name='ai_nudges'
+    )
+    
+    # Nudge Content
+    nudge_type = models.CharField(max_length=25, choices=NUDGE_TYPES)
+    title = models.CharField(max_length=100)
+    message = models.TextField(help_text="AI-generated personalized message")
+    action_suggestion = models.CharField(max_length=200, blank=True)
+    
+    # AI Generation Context
+    model_used = models.CharField(max_length=50, default='WebLLM-Local')
+    prompt_context = models.JSONField(
+        default=dict,
+        help_text="Context data used to generate the nudge"
+    )
+    generation_tokens = models.IntegerField(default=0, help_text="Number of tokens generated")
+    generation_time_ms = models.IntegerField(default=0, help_text="Time taken to generate (ms)")
+    
+    # Personalization Factors
+    patient_history = models.JSONField(
+        default=dict,
+        help_text="Patient history factors considered"
+    )
+    current_context = models.JSONField(
+        default=dict,
+        help_text="Current situational context"
+    )
+    behavioral_patterns = models.JSONField(
+        default=dict,
+        help_text="Patient behavioral patterns identified"
+    )
+    
+    # Delivery and Engagement
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='generated')
+    delivery_method = models.CharField(
+        max_length=20,
+        choices=[
+            ('dashboard_toast', 'Dashboard Toast'),
+            ('dashboard_card', 'Dashboard Card'),
+            ('modal', 'Modal Dialog'),
+            ('notification', 'Browser Notification'),
+            ('email', 'Email'),
+        ],
+        default='dashboard_toast'
+    )
+    
+    # Timing
+    scheduled_for = models.DateTimeField(help_text="When to deliver this nudge")
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    viewed_at = models.DateTimeField(null=True, blank=True)
+    acted_upon_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(help_text="When this nudge expires")
+    
+    # Effectiveness Tracking
+    user_rating = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="User rating of nudge helpfulness (1-5)"
+    )
+    led_to_action = models.BooleanField(default=False)
+    action_type = models.CharField(max_length=50, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'ai_health_nudges'
+        verbose_name = 'AI Health Nudge'
+        verbose_name_plural = 'AI Health Nudges'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.patient.username} - {self.nudge_type} - {self.title[:30]}"
+
+
+class WebLLMSession(models.Model):
+    """Track WebLLM usage sessions for analytics"""
+    SESSION_TYPES = [
+        ('medicine_consultation', 'Medicine Consultation'),
+        ('nudge_generation', 'Nudge Generation'),
+        ('health_education', 'Health Education'),
+        ('symptom_analysis', 'Symptom Analysis'),
+        ('general_chat', 'General Health Chat'),
+    ]
+    
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='webllm_sessions')
+    session_type = models.CharField(max_length=25, choices=SESSION_TYPES)
+    
+    # Model Information
+    model_id = models.CharField(max_length=100, help_text="WebLLM model identifier used")
+    model_size = models.CharField(max_length=20, help_text="Model size (e.g., '1B', '3B')")
+    
+    # Session Details
+    session_start = models.DateTimeField(auto_now_add=True)
+    session_end = models.DateTimeField(null=True, blank=True)
+    total_messages = models.IntegerField(default=0)
+    total_tokens_generated = models.IntegerField(default=0)
+    
+    # Performance Metrics
+    average_response_time_ms = models.IntegerField(default=0)
+    total_generation_time_ms = models.IntegerField(default=0)
+    
+    # Context
+    initial_prompt = models.TextField(blank=True)
+    conversation_summary = models.TextField(blank=True)
+    
+    # User Satisfaction
+    user_rating = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="User rating of session helpfulness (1-5)"
+    )
+    feedback = models.TextField(blank=True)
+    
+    # Technical Details
+    browser_info = models.JSONField(default=dict)
+    device_info = models.JSONField(default=dict)
+    performance_stats = models.JSONField(default=dict)
+    
+    class Meta:
+        db_table = 'ai_webllm_sessions'
+        verbose_name = 'WebLLM Session'
+        verbose_name_plural = 'WebLLM Sessions'
+        ordering = ['-session_start']
+    
+    def __str__(self):
+        return f"{self.patient.username} - {self.session_type} - {self.session_start}"
 
 
 class StabilityScore(models.Model):
