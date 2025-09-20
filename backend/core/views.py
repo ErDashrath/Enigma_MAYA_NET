@@ -255,3 +255,8 @@ def api_stability_score(request):
         }
     }
     return JsonResponse(score_data)
+
+
+def webllm_test_view(request):
+    """WebLLM test interface view"""
+    return render(request, 'webllm_test.html')

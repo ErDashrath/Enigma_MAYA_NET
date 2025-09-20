@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebLLM Test - VitalCircle</title>
+    <!-- TailwindCSS + DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div class="min-h-screen bg-base-200 p-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl font-bold text-center mb-8">WebLLM Test Interface</h1>
+            
+            <!-- Model Selection -->
+            <div class="card bg-base-100 shadow-xl mb-6">
+                <div class="card-body">
+                    <h2 class="card-title">Model Selection</h2>
+                    <div id="model-list" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Models will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div id="progress-container" class="card bg-base-100 shadow-xl mb-6 hidden">
+                <div class="card-body">
+                    <h3 class="card-title">Loading Progress</h3>
+                    <div class="flex items-center gap-4">
+                        <progress id="model-progress" class="progress progress-primary w-full" value="0" max="100"></progress>
+                        <span id="progress-text" class="text-sm">0%</span>
+                    </div>
+                    <div id="progress-details" class="text-sm opacity-70"></div>
+                </div>
+            </div>
+            
+            <!-- Status -->
+            <div class="card bg-base-100 shadow-xl mb-6">
+                <div class="card-body">
+                    <h3 class="card-title">Status</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="stat">
+                            <div class="stat-title">WebGPU Support</div>
+                            <div class="stat-value" id="webgpu-status">Checking...</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-title">Current Model</div>
+                            <div class="stat-value text-sm" id="current-model">None</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-title">Status</div>
+                            <div class="stat-value text-sm" id="model-status">Ready</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Test Generation -->
+            <div class="card bg-base-100 shadow-xl mb-6">
+                <div class="card-body">
+                    <h3 class="card-title">Test Generation</h3>
+                    <div class="form-control mb-4">
+                        <label class="label">
+                            <span class="label-text">Test Type</span>
+                        </label>
+                        <select id="test-type" class="select select-bordered">
+                            <option value="medicine_nudge">Medicine Nudge</option>
+                            <option value="health_education">Health Education</option>
+                            <option value="motivation">Motivation</option>
+                            <option value="custom">Custom Prompt</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-control mb-4" id="custom-prompt-container" style="display: none;">
+                        <label class="label">
+                            <span class="label-text">Custom Prompt</span>
+                        </label>
+                        <textarea id="custom-prompt" class="textarea textarea-bordered" placeholder="Enter your custom prompt..."></textarea>
+                    </div>
+                    
+                    <button id="test-generate" class="btn btn-primary" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Generate
+                    </button>
+                    
+                    <div class="divider"></div>
+                    
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Generated Response</span>
+                        </label>
+                        <div id="response-container" class="bg-base-200 p-4 rounded-lg min-h-20">
+                            <span class="text-gray-500">Generated text will appear here...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Console Log -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title">Console Log</h3>
+                    <div id="console-log" class="bg-black text-green-400 p-4 rounded-lg h-40 overflow-y-auto font-mono text-sm">
+                        <div>WebLLM Test Interface Loaded</div>
+                    </div>
+                    <button onclick="clearConsole()" class="btn btn-sm btn-ghost mt-2">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include WebLLM Service -->
+    <script src="/static/js/webllm-service.js"></script>
+
+    <script>
+        let webllmService = null;
+        let progressContainer = null;
+        let modelProgress = null;
+        let progressText = null;
+        let progressDetails = null;
+
+        // Initialize the test interface
+        document.addEventListener('DOMContentLoaded', async function() {
+            progressContainer = document.getElementById('progress-container');
+            modelProgress = document.getElementById('model-progress');
+            progressText = document.getElementById('progress-text');
+            progressDetails = document.getElementById('progress-details');
+            
+            // Initialize WebLLM service
+            webllmService = new VitalCircleWebLLM();
+            
+            // Set up progress callback
+            webllmService.setProgressCallback(updateProgress);
+            
+            // Load available models
+            displayModels();
+            
+            // Check WebGPU support
+            checkWebGPUSupport();
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            log('WebLLM service initialized');
+        });
+
+        function log(message) {
+            const consoleLog = document.getElementById('console-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        function clearConsole() {
+            document.getElementById('console-log').innerHTML = '<div>Console cleared</div>';
+        }
+
+        async function checkWebGPUSupport() {
+            const webgpuStatus = document.getElementById('webgpu-status');
+            
+            if (!navigator.gpu) {
+                webgpuStatus.textContent = '❌ Not Available';
+                webgpuStatus.className = 'stat-value text-error';
+                log('WebGPU not supported');
+                return false;
+            }
+            
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                if (adapter) {
+                    webgpuStatus.textContent = '✅ Available';
+                    webgpuStatus.className = 'stat-value text-success';
+                    log('WebGPU supported');
+                    return true;
+                } else {
+                    webgpuStatus.textContent = '❌ No Adapter';
+                    webgpuStatus.className = 'stat-value text-error';
+                    log('WebGPU adapter not available');
+                    return false;
+                }
+            } catch (error) {
+                webgpuStatus.textContent = '❌ Error';
+                webgpuStatus.className = 'stat-value text-error';
+                log(`WebGPU error: ${error.message}`);
+                return false;
+            }
+        }
+
+        function displayModels() {
+            const modelList = document.getElementById('model-list');
+            const models = webllmService.getAvailableModels();
+            
+            modelList.innerHTML = models.map(model => `
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h4 class="card-title text-lg">${model.name}</h4>
+                        <p class="text-sm opacity-70">${model.description}</p>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="badge badge-outline">${model.size}</span>
+                            <span class="badge badge-outline">${model.parameters}</span>
+                        </div>
+                        <div class="card-actions justify-end mt-4">
+                            <button onclick="loadModel('${model.id}')" class="btn btn-primary btn-sm">
+                                Load Model
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            log(`Displayed ${models.length} available models`);
+        }
+
+        async function loadModel(modelId) {
+            log(`Starting to load model: ${modelId}`);
+            progressContainer.classList.remove('hidden');
+            
+            document.getElementById('model-status').textContent = 'Loading...';
+            
+            try {
+                const success = await webllmService.loadModel(modelId);
+                
+                if (success) {
+                    document.getElementById('current-model').textContent = webllmService.getCurrentModel();
+                    document.getElementById('model-status').textContent = 'Ready';
+                    document.getElementById('test-generate').disabled = false;
+                    log(`Model loaded successfully: ${modelId}`);
+                } else {
+                    document.getElementById('model-status').textContent = 'Failed';
+                    log(`Failed to load model: ${modelId}`);
+                }
+            } catch (error) {
+                document.getElementById('model-status').textContent = 'Error';
+                log(`Error loading model: ${error.message}`);
+            }
+        }
+
+        function updateProgress(progressData) {
+            if (progressData.progress !== undefined) {
+                const percentage = Math.round(progressData.progress * 100);
+                modelProgress.value = percentage;
+                progressText.textContent = `${percentage}%`;
+                
+                if (progressData.text) {
+                    progressDetails.textContent = progressData.text;
+                }
+                
+                if (percentage === 100) {
+                    setTimeout(() => {
+                        progressContainer.classList.add('hidden');
+                    }, 2000);
+                }
+            }
+        }
+
+        function setupEventListeners() {
+            const testType = document.getElementById('test-type');
+            const customPromptContainer = document.getElementById('custom-prompt-container');
+            const testGenerate = document.getElementById('test-generate');
+            
+            testType.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customPromptContainer.style.display = 'block';
+                } else {
+                    customPromptContainer.style.display = 'none';
+                }
+            });
+            
+            testGenerate.addEventListener('click', generateTest);
+        }
+
+        async function generateTest() {
+            const testType = document.getElementById('test-type').value;
+            const customPrompt = document.getElementById('custom-prompt').value;
+            const responseContainer = document.getElementById('response-container');
+            const testButton = document.getElementById('test-generate');
+            
+            if (!webllmService.isModelLoaded()) {
+                log('No model loaded');
+                return;
+            }
+            
+            testButton.disabled = true;
+            testButton.textContent = 'Generating...';
+            responseContainer.innerHTML = '<span class="loading loading-dots loading-lg"></span>';
+            
+            try {
+                let result = '';
+                
+                switch (testType) {
+                    case 'medicine_nudge':
+                        result = await webllmService.generateMedicineNudge({
+                            medicine_name: 'Lisinopril',
+                            dosage: '10mg',
+                            time: '8:00 AM'
+                        });
+                        break;
+                        
+                    case 'health_education':
+                        result = await webllmService.generateHealthEducation('hypertension');
+                        break;
+                        
+                    case 'motivation':
+                        result = await webllmService.generateMotivation({
+                            recentAchievement: 'took medication on time for 3 days',
+                            challenge: 'maintaining consistent blood pressure'
+                        });
+                        break;
+                        
+                    case 'custom':
+                        if (!customPrompt.trim()) {
+                            responseContainer.innerHTML = '<span class="text-error">Please enter a custom prompt</span>';
+                            return;
+                        }
+                        // For custom prompts, use a simple completion
+                        result = await webllmService.generateMotivation({});
+                        break;
+                }
+                
+                responseContainer.innerHTML = `<div class="prose">${result}</div>`;
+                log(`Generated ${testType} response`);
+                
+            } catch (error) {
+                responseContainer.innerHTML = `<span class="text-error">Error: ${error.message}</span>`;
+                log(`Generation error: ${error.message}`);
+            } finally {
+                testButton.disabled = false;
+                testButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Generate
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

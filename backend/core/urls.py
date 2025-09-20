@@ -10,6 +10,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('vitals/', views.vitals_view, name='vitals'),
     path('reports/', views.reports_view, name='reports'),
+    path('webllm-test/', views.webllm_test_view, name='webllm_test'),
     
     # Authentication views
     path('auth/login/', views.login_view, name='login'),
