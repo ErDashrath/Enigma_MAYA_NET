@@ -134,4 +134,5 @@ urlpatterns = [
     path('api/', api.urls),  # API endpoints under /api/
     path('', include('core.urls')),  # Frontend template views
     path('ai/', include('ai_engine.urls')),  # AI engine endpoints
+    path('vitals/', include('vitals.urls')),  # Vitals tracking endpoints
 ]

@@ -3,6 +3,7 @@ Vitals monitoring models for VitalCircle
 """
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
 from patients.models import PatientProfile
 
 
@@ -50,6 +51,20 @@ class VitalSigns(models.Model):
         help_text="Weight (lbs)"
     )
     
+    # Height (for BMI calculation)
+    height = models.FloatField(
+        null=True, blank=True,
+        validators=[MinValueValidator(36.0), MaxValueValidator(96.0)],
+        help_text="Height (inches)"
+    )
+    
+    # Blood Glucose
+    blood_glucose = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(40), MaxValueValidator(600)],
+        help_text="Blood glucose level (mg/dL)"
+    )
+    
     # Oxygen Saturation
     oxygen_saturation = models.IntegerField(
         null=True, blank=True,
@@ -90,6 +105,45 @@ class VitalSigns(models.Model):
         return None
     
     @property
+    def bmi(self):
+        """Calculate BMI from weight and height"""
+        if self.weight and self.height:
+            # BMI = (weight in lbs / (height in inches)²) × 703
+            return round((self.weight / (self.height ** 2)) * 703, 1)
+        return None
+    
+    @property
+    def bmi_category(self):
+        """Categorize BMI reading"""
+        bmi = self.bmi
+        if not bmi:
+            return "Unknown"
+        
+        if bmi < 18.5:
+            return "Underweight"
+        elif bmi < 25:
+            return "Normal weight"
+        elif bmi < 30:
+            return "Overweight"
+        else:
+            return "Obese"
+    
+    @property
+    def glucose_category(self):
+        """Categorize blood glucose reading"""
+        if not self.blood_glucose:
+            return "Unknown"
+        
+        if self.blood_glucose < 70:
+            return "Low (Hypoglycemia)"
+        elif self.blood_glucose < 100:
+            return "Normal (Fasting)"
+        elif self.blood_glucose < 140:
+            return "Pre-diabetes"
+        else:
+            return "Diabetes Range"
+    
+    @property
     def bp_category(self):
         """Categorize blood pressure reading"""
         if not (self.systolic_bp and self.diastolic_bp):
@@ -123,6 +177,25 @@ class LifestyleMetrics(models.Model):
         (3, 'Fair'),
         (4, 'Good'),
         (5, 'Excellent'),
+    ]
+    
+    ACTIVITY_LEVELS = [
+        (1, 'Sedentary'),
+        (2, 'Lightly Active'),
+        (3, 'Moderately Active'),
+        (4, 'Very Active'),
+        (5, 'Extra Active'),
+    ]
+    
+    FOOD_CATEGORIES = [
+        ('vegetables', 'Vegetables'),
+        ('fruits', 'Fruits'),
+        ('grains', 'Grains'),
+        ('protein', 'Protein'),
+        ('dairy', 'Dairy'),
+        ('processed', 'Processed Foods'),
+        ('fast_food', 'Fast Food'),
+        ('sweets', 'Sweets/Desserts'),
     ]
     
     patient = models.ForeignKey(PatientProfile, on_delete=models.CASCADE, related_name='lifestyle_metrics')
@@ -166,7 +239,18 @@ class LifestyleMetrics(models.Model):
         help_text="Calorie intake"
     )
     
+    # Food log categories (JSON field to track multiple food types)
+    food_log = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Daily food intake by category {category: servings}"
+    )
+    
     # Physical Activity
+    activity_level = models.IntegerField(
+        choices=ACTIVITY_LEVELS, null=True, blank=True,
+        help_text="Overall activity level (1-5 scale)"
+    )
     exercise_minutes = models.IntegerField(
         null=True, blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(1440)],
@@ -181,6 +265,11 @@ class LifestyleMetrics(models.Model):
     # Medication Adherence
     medication_taken = models.BooleanField(null=True, blank=True, help_text="Medications taken as prescribed")
     missed_doses = models.IntegerField(default=0, help_text="Number of missed medication doses")
+    medication_adherence_percentage = models.FloatField(
+        null=True, blank=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text="Medication adherence percentage (0-100%)"
+    )
     
     recorded_at = models.DateTimeField()
     notes = models.TextField(blank=True, help_text="Additional lifestyle notes")
@@ -196,6 +285,23 @@ class LifestyleMetrics(models.Model):
     
     def __str__(self):
         return f"{self.patient.full_name} - Lifestyle - {self.recorded_at.strftime('%Y-%m-%d')}"
+    
+    @property
+    def stress_level_display(self):
+        """Get human-readable stress level"""
+        return dict(self.STRESS_LEVELS).get(self.stress_level, "Unknown")
+    
+    @property
+    def activity_level_display(self):
+        """Get human-readable activity level"""
+        return dict(self.ACTIVITY_LEVELS).get(self.activity_level, "Unknown")
+    
+    @property
+    def total_food_servings(self):
+        """Calculate total food servings from food log"""
+        if not self.food_log:
+            return 0
+        return sum(self.food_log.values())
 
 
 class SymptomReport(models.Model):
@@ -242,3 +348,229 @@ class SymptomReport(models.Model):
     
     def __str__(self):
         return f"{self.patient.full_name} - {self.symptom_name} (Severity: {self.get_severity_display()})"
+
+
+class MedicalHistory(models.Model):
+    """Track chronic conditions, past episodes, and medical history"""
+    CHRONIC_CONDITIONS = [
+        ('hypertension', 'Hypertension'),
+        ('diabetes_type1', 'Type 1 Diabetes'),
+        ('diabetes_type2', 'Type 2 Diabetes'),
+        ('heart_disease', 'Heart Disease'),
+        ('stroke', 'Stroke'),
+        ('kidney_disease', 'Kidney Disease'),
+        ('liver_disease', 'Liver Disease'),
+        ('copd', 'COPD'),
+        ('asthma', 'Asthma'),
+        ('cancer', 'Cancer'),
+        ('depression', 'Depression'),
+        ('anxiety', 'Anxiety'),
+        ('other', 'Other'),
+    ]
+    
+    EPISODE_TYPES = [
+        ('hypertensive_crisis', 'Hypertensive Crisis'),
+        ('hypoglycemia', 'Hypoglycemia (Low Blood Sugar)'),
+        ('hyperglycemia', 'Hyperglycemia (High Blood Sugar)'),
+        ('heart_attack', 'Heart Attack'),
+        ('stroke', 'Stroke'),
+        ('emergency_room', 'Emergency Room Visit'),
+        ('hospitalization', 'Hospitalization'),
+        ('medication_reaction', 'Medication Adverse Reaction'),
+        ('fall', 'Fall/Injury'),
+        ('other', 'Other Medical Episode'),
+    ]
+    
+    patient = models.ForeignKey(PatientProfile, on_delete=models.CASCADE, related_name='medical_history')
+    
+    # Chronic Conditions
+    chronic_conditions = models.JSONField(
+        default=list,
+        help_text="List of chronic conditions patient has"
+    )
+    
+    # Past Episodes
+    past_episodes = models.JSONField(
+        default=list,
+        help_text="List of past medical episodes with dates and details"
+    )
+    
+    # Family History
+    family_history = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Family medical history by condition"
+    )
+    
+    # Risk Factors
+    risk_factors = models.JSONField(
+        default=list,
+        help_text="Additional risk factors (smoking, alcohol, etc.)"
+    )
+    
+    # Allergies and Reactions
+    allergies = models.JSONField(
+        default=list,
+        help_text="Known allergies and adverse reactions"
+    )
+    
+    # Current Medications
+    current_medications = models.JSONField(
+        default=list,
+        help_text="List of current medications with dosages"
+    )
+    
+    # Notes
+    notes = models.TextField(blank=True, help_text="Additional medical history notes")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'vitals_medical_history'
+        verbose_name = 'Medical History'
+        verbose_name_plural = 'Medical Histories'
+        ordering = ['-updated_at']
+    
+    def __str__(self):
+        conditions = ', '.join(self.chronic_conditions) if self.chronic_conditions else 'No conditions'
+        return f"{self.patient.full_name} - Medical History ({conditions})"
+    
+    def has_condition(self, condition):
+        """Check if patient has a specific chronic condition"""
+        return condition in self.chronic_conditions
+    
+    def has_diabetes(self):
+        """Check if patient has any type of diabetes"""
+        return any(condition in self.chronic_conditions for condition in ['diabetes_type1', 'diabetes_type2'])
+    
+    def add_episode(self, episode_type, date, description="", severity=None):
+        """Add a new medical episode"""
+        episode = {
+            'type': episode_type,
+            'date': date.isoformat() if hasattr(date, 'isoformat') else str(date),
+            'description': description,
+            'severity': severity,
+            'recorded_at': timezone.now().isoformat()
+        }
+        if not self.past_episodes:
+            self.past_episodes = []
+        self.past_episodes.append(episode)
+        self.save()
+
+
+class RiskAssessment(models.Model):
+    """ML-based risk assessments and predictions for adverse events"""
+    RISK_LEVELS = [
+        ('low', 'Low Risk (0-25%)'),
+        ('moderate', 'Moderate Risk (25-50%)'),
+        ('high', 'High Risk (50-75%)'),
+        ('critical', 'Critical Risk (75-100%)'),
+    ]
+    
+    TIME_HORIZONS = [
+        ('24h', 'Next 24 Hours'),
+        ('48h', 'Next 48 Hours'),
+        ('7d', 'Next 7 Days'),
+        ('30d', 'Next 30 Days'),
+    ]
+    
+    ASSESSMENT_TYPES = [
+        ('manual', 'Manual Assessment'),
+        ('automated', 'Automated Assessment'),
+        ('llama_prediction', 'LLaMA AI Prediction'),
+        ('rule_based', 'Rule-Based Assessment'),
+    ]
+    
+    patient = models.ForeignKey(PatientProfile, on_delete=models.CASCADE, related_name='risk_assessments')
+    
+    # Assessment Type
+    assessment_type = models.CharField(
+        max_length=20, 
+        choices=ASSESSMENT_TYPES, 
+        default='automated',
+        help_text="Type of risk assessment performed"
+    )
+    
+    # Core Assessment
+    stability_score = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        help_text="Stability score (0-100, higher is more stable)"
+    )
+    
+    risk_level = models.CharField(max_length=10, choices=RISK_LEVELS)
+    time_horizon = models.CharField(max_length=5, choices=TIME_HORIZONS, default='48h')
+    
+    # Risk of adverse event (binary prediction)
+    adverse_event_risk = models.BooleanField(
+        help_text="High risk of adverse event in time horizon (0=stable, 1=high risk)"
+    )
+    adverse_event_probability = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Probability of adverse event (0-1)"
+    )
+    
+    # Component Scores
+    vital_signs_score = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        default=0.0,
+        help_text="Vital signs component score"
+    )
+    lifestyle_score = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        default=0.0,
+        help_text="Lifestyle factors component score"
+    )
+    medication_adherence_score = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(100.0)],
+        default=0.0,
+        help_text="Medication adherence score"
+    )
+    
+    # Risk Factors Identified
+    risk_factors = models.JSONField(
+        default=list,
+        help_text="List of identified risk factors contributing to score"
+    )
+    
+    # Model Information
+    model_version = models.CharField(max_length=20, default="1.0")
+    calculation_method = models.CharField(max_length=50, default="rule_based")
+    confidence_level = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Model confidence in prediction (0-1)"
+    )
+    
+    # Data Points Used
+    data_points_used = models.JSONField(
+        default=dict,
+        help_text="Summary of data points used in calculation"
+    )
+    
+    # Recommendations
+    recommendations = models.JSONField(
+        default=list,
+        help_text="AI-generated recommendations to improve stability"
+    )
+    
+    calculated_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(help_text="When this assessment expires")
+    
+    class Meta:
+        db_table = 'vitals_risk_assessments'
+        verbose_name = 'Risk Assessment'
+        verbose_name_plural = 'Risk Assessments'
+        ordering = ['-calculated_at']
+    
+    def __str__(self):
+        return f"{self.patient.full_name} - Risk: {self.risk_level} - Score: {self.stability_score}"
+    
+    @property
+    def is_high_risk(self):
+        """Check if this is a high risk assessment"""
+        return self.risk_level in ['high', 'critical']
+    
+    @property
+    def risk_percentage(self):
+        """Get risk as percentage"""
+        return round(self.adverse_event_probability * 100, 1)

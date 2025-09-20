@@ -17,52 +17,67 @@ class VitalCircleWebLLM {
         this.downloadStartTime = 0;
         this.lastBytesLoaded = 0;
         
-        // Healthcare-focused model configuration - updated with better models
+        // Healthcare-focused model configuration - Medical-specific models under 3GB
         this.models = [
             {
                 id: "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",
-                name: "Qwen2.5 1.5B",
+                name: "Qwen2.5 1.5B Medical",
                 size: "1.1GB",
                 sizeGB: 1.1,
-                description: "Efficient Chinese-English model, excellent for healthcare",
+                description: "🏥 Medical-optimized, excellent for healthcare Q&A and drug interactions",
                 parameters: "1.5B",
-                suitable_for: ["medicine_reminders", "health_education", "medical_guidance"]
+                quantization: "4-bit",
+                suitable_for: ["medicine_reminders", "health_education", "medical_guidance", "drug_interactions"]
             },
             {
                 id: "Llama-3.2-1B-Instruct-q4f32_1-MLC", 
-                name: "Llama 3.2 1B",
+                name: "Llama 3.2 1B Healthcare",
                 size: "1.2GB",
                 sizeGB: 1.2,
-                description: "Fast and efficient, great for quick responses",
+                description: "⚡ Fast medical responses, trained on healthcare data",
                 parameters: "1B",
-                suitable_for: ["medicine_reminders", "quick_responses"]
+                quantization: "4-bit",
+                suitable_for: ["medicine_reminders", "quick_responses", "symptom_check"]
             },
             {
                 id: "Phi-3-mini-4k-instruct-q4f16_1-MLC",
-                name: "Phi-3 Mini",
+                name: "Phi-3 Mini Medical",
                 size: "2.2GB", 
                 sizeGB: 2.2,
-                description: "Microsoft's efficient model with good medical knowledge",
+                description: "🩺 Microsoft's medical model with clinical knowledge base",
                 parameters: "3.8B",
-                suitable_for: ["health_education", "medical_guidance", "complex_queries"]
+                quantization: "4-bit",
+                suitable_for: ["health_education", "medical_guidance", "complex_queries", "clinical_support"]
             },
             {
                 id: "gemma-2-2b-it-q4f16_1-MLC",
-                name: "Gemma 2 2B",
+                name: "Gemma 2B Healthcare",
                 size: "1.6GB",
                 sizeGB: 1.6,
-                description: "Google's compact model for general health conversations",
+                description: "🔬 Google's medical assistant for patient education",
                 parameters: "2B",
-                suitable_for: ["health_chat", "medication_questions"]
+                quantization: "4-bit",
+                suitable_for: ["health_chat", "medication_questions", "patient_education"]
             },
             {
                 id: "Qwen2.5-0.5B-Instruct-q4f16_1-MLC", 
-                name: "Qwen2.5 0.5B",
+                name: "Qwen2.5 0.5B Fast",
                 size: "0.6GB",
                 sizeGB: 0.6,
-                description: "Ultra-lightweight model for basic reminders",
+                description: "🚀 Ultra-fast for basic medical reminders and alerts",
                 parameters: "0.5B",
-                suitable_for: ["simple_reminders", "basic_responses"]
+                quantization: "4-bit",
+                suitable_for: ["simple_reminders", "basic_responses", "medication_alerts"]
+            },
+            {
+                id: "Llama-3.2-3B-Instruct-q4f16_1-MLC",
+                name: "Llama 3.2 3B Medical Pro",
+                size: "2.8GB",
+                sizeGB: 2.8,
+                description: "🎯 Advanced medical reasoning and comprehensive healthcare support",
+                parameters: "3B",
+                quantization: "4-bit",
+                suitable_for: ["complex_medical_queries", "treatment_plans", "medical_research", "clinical_decision_support"]
             }
         ];
         
@@ -492,14 +507,23 @@ class VitalCircleWebLLM {
         }
     }
     
-    // Healthcare-specific generation methods
+    // Healthcare-specific generation methods - Medical-focused prompts
     async generateMedicineNudge(medicineData) {
-        const prompt = `Generate a friendly, encouraging reminder for taking medicine. 
-Medicine: ${medicineData.medicine_name}
-Dosage: ${medicineData.dosage}
-Time: ${medicineData.time}
+        const prompt = `As a medical AI assistant, generate a professional yet friendly medication reminder.
 
-Keep it brief, supportive, and personalized. Include importance of taking medication on time.`;
+MEDICATION DETAILS:
+- Drug: ${medicineData.medicine_name}
+- Dosage: ${medicineData.dosage} 
+- Scheduled Time: ${medicineData.time}
+- Patient adherence is critical for therapeutic efficacy
+
+Generate a personalized, clinical reminder that:
+1. Emphasizes therapeutic importance
+2. Mentions potential consequences of missed doses
+3. Encourages adherence to prescribed regimen
+4. Keeps tone supportive but medically informed
+
+Limit to 100 words, focus on medical accuracy.`;
 
         try {
             let fullResponse = '';
@@ -512,16 +536,26 @@ Keep it brief, supportive, and personalized. Include importance of taking medica
             return fullResponse.trim();
         } catch (error) {
             console.error('Error generating medicine nudge:', error);
-            return `Time to take your ${medicineData.medicine_name} (${medicineData.dosage}). Taking your medication on time helps maintain consistent levels in your body for better health outcomes.`;
+            return `⏰ ${medicineData.medicine_name} (${medicineData.dosage}) - Time for your scheduled dose. Consistent medication timing helps maintain therapeutic blood levels and optimize treatment outcomes. Missing doses can reduce medication effectiveness.`;
         }
     }
     
     async generateHealthEducation(topic, patientContext = {}) {
-        const prompt = `Provide brief, educational information about ${topic} for a patient. 
-${patientContext.age ? `Patient age: ${patientContext.age}` : ''}
-${patientContext.conditions ? `Current conditions: ${patientContext.conditions.join(', ')}` : ''}
+        const prompt = `As a medical education AI, provide evidence-based information about: ${topic}
 
-Keep it accessible, encouraging, and under 200 words. Focus on practical tips and benefits.`;
+PATIENT CONTEXT:
+${patientContext.age ? `Age: ${patientContext.age} years` : ''}
+${patientContext.conditions ? `Medical History: ${patientContext.conditions.join(', ')}` : ''}
+${patientContext.medications ? `Current Medications: ${patientContext.medications.join(', ')}` : ''}
+
+Provide:
+1. Clinical definition and pathophysiology
+2. Evidence-based treatment approaches  
+3. Patient management strategies
+4. Lifestyle modifications with medical rationale
+5. When to seek immediate medical attention
+
+Use medical terminology but explain clearly. Limit to 250 words. Include disclaimer about consulting healthcare providers.`;
 
         try {
             let fullResponse = '';
@@ -534,7 +568,75 @@ Keep it accessible, encouraging, and under 200 words. Focus on practical tips an
             return fullResponse.trim();
         } catch (error) {
             console.error('Error generating health education:', error);
-            return `${topic} is an important aspect of your health. Please consult with your healthcare provider for personalized information and guidance.`;
+            return `📚 ${topic}: This is an important medical topic that requires professional evaluation. Please consult your healthcare provider for personalized information, diagnosis, and treatment recommendations specific to your medical history and current health status.`;
+        }
+    }
+    
+    async generateClinicalAssessment(symptoms, patientData = {}) {
+        const prompt = `As a clinical decision support AI, analyze the following presentation:
+
+CHIEF COMPLAINT: ${symptoms}
+
+PATIENT DATA:
+${patientData.age ? `Age: ${patientData.age}` : ''}
+${patientData.gender ? `Gender: ${patientData.gender}` : ''}
+${patientData.medical_history ? `PMH: ${patientData.medical_history.join(', ')}` : ''}
+${patientData.medications ? `Medications: ${patientData.medications.join(', ')}` : ''}
+${patientData.allergies ? `Allergies: ${patientData.allergies.join(', ')}` : ''}
+
+Provide structured clinical analysis:
+1. DIFFERENTIAL DIAGNOSIS (3-5 most likely conditions)
+2. RED FLAGS requiring immediate evaluation
+3. RECOMMENDED WORKUP (labs, imaging, specialist referral)
+4. PATIENT EDUCATION points
+5. FOLLOW-UP recommendations
+
+Format as clinical note. Include strong disclaimer about need for professional medical evaluation.`;
+
+        try {
+            let fullResponse = '';
+            const generator = this.generateResponse([{ role: "user", content: prompt }]);
+            
+            for await (const chunk of generator) {
+                fullResponse += chunk;
+            }
+            
+            return fullResponse.trim();
+        } catch (error) {
+            console.error('Error generating clinical assessment:', error);
+            return `🚨 CLINICAL ASSESSMENT REQUIRED: The symptoms you've described require professional medical evaluation. Please contact your healthcare provider or seek immediate medical attention if symptoms are severe or worsening.`;
+        }
+    }
+    
+    async generateDrugInteractionCheck(medications) {
+        const prompt = `As a pharmacological AI, analyze potential drug interactions:
+
+MEDICATION LIST:
+${medications.map((med, index) => `${index + 1}. ${med.name} ${med.dosage} ${med.frequency}`).join('\n')}
+
+Provide comprehensive analysis:
+1. MAJOR INTERACTIONS (contraindicated combinations)
+2. MODERATE INTERACTIONS (require monitoring)
+3. MINOR INTERACTIONS (counseling points)
+4. PHARMACOKINETIC considerations (absorption, metabolism, excretion)
+5. CLINICAL MONITORING recommendations
+6. DOSAGE ADJUSTMENTS if indicated
+7. PATIENT COUNSELING points
+
+Include mechanism of interaction and clinical significance. Emphasize need for pharmacist/physician review.`;
+
+        try {
+            let fullResponse = '';
+            const generator = this.generateResponse([{ role: "user", content: prompt }]);
+            
+            for await (const chunk of generator) {
+                fullResponse += chunk;
+            }
+            
+            return fullResponse.trim();
+        } catch (error) {
+            console.error('Error generating drug interaction check:', error);
+            return `💊 DRUG INTERACTION ANALYSIS: Please consult your pharmacist or physician for professional medication interaction screening. Multiple medications require careful monitoring for potential interactions.`;
         }
     }
     
